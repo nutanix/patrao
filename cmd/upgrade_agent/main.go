@@ -5,6 +5,7 @@ import (
 	"os"
 
 	"github.com/urfave/cli"
+	""
 )
 
 func before(context *cli.Context) error {
@@ -23,7 +24,7 @@ func after(context *cli.Context) error {
 
 func start(context *cli.Context) error {
 	log.Println("entry point -> begin")
-	rc := core.main(context)
+	rc := nill//core.main(context)
 
 	log.Printf("entry point -> end")
 	return rc
