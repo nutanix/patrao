@@ -1,0 +1,5 @@
+package DockerManager
+
+func stub() {
+
+}

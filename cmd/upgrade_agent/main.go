@@ -1,22 +1,26 @@
 package main //import github.com/nutanix/patrao/
 
 import (
-	"log"
 	"os"
 
-	core "github.com/nutanix/patrao/internal/app/upgrade_agent"
+	core "github.com/nutanix/patrao/internal/app/upgrade_agent/Core"
+	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
 func before(context *cli.Context) error {
-	log.Println("before action")
+	if context.GlobalBool("debug") {
+		log.SetLevel(log.DebugLevel)
+	}
+
+	log.Infoln("before action")
 
 	// TBD
 	return nil
 }
 
 func after(context *cli.Context) error {
-	log.Println("after action")
+	log.Infoln("after action")
 
 	// TBD
 	return nil
@@ -39,10 +43,16 @@ func setupAppFlags(app *cli.App) {
 			Value:  "unix:///var/run/docker.sock",
 			EnvVar: "PATRAO_DOCKER_HOST",
 		},
+		cli.BoolFlag{
+			Name:  "run-once",
+			Usage: "Run once now and exit",
+		},
 	}
 }
 
 func main() {
+	log.SetLevel(log.InfoLevel)
+
 	app := cli.NewApp()
 
 	app.Name = "Patrao Upgrade Agent"
@@ -54,6 +64,6 @@ func main() {
 	setupAppFlags(app)
 
 	if err := app.Run(os.Args); err != nil {
-		log.Fatal("fatal error!")
+		log.Fatal(err)
 	}
 }
