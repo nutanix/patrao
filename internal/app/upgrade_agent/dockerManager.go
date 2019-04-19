@@ -1,4 +1,4 @@
-package DockerManager
+package core
 
 func stub() {
 

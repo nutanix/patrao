@@ -3,7 +3,7 @@ package main //import github.com/nutanix/patrao/
 import (
 	"os"
 
-	core "github.com/nutanix/patrao/internal/app/upgrade_agent/core"
+	core "github.com/nutanix/patrao/internal/app/upgrade_agent"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
