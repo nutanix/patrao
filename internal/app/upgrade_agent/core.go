@@ -4,7 +4,7 @@ import (
 	"github.com/urfave/cli"
 )
 
-func main(context *cli.Context) error {
+func Main(context *cli.Context) error {
 
 	return nil
 }

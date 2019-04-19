@@ -4,6 +4,7 @@ import (
 	"log"
 	"os"
 
+	core "github.com/nutanix/patrao/internal/app/upgrade_agent"
 	"github.com/urfave/cli"
 )
 
@@ -23,10 +24,11 @@ func after(context *cli.Context) error {
 
 func start(context *cli.Context) error {
 	log.Println("entry point -> begin")
-	rc := core.main(context)
+
+	rc := core.Main(context)
 
 	log.Printf("entry point -> end")
-	return nil
+	return rc
 }
 
 func setupAppFlags(app *cli.App) {
