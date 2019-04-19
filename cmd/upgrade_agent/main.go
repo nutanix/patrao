@@ -23,7 +23,7 @@ func after(context *cli.Context) error {
 
 func start(context *cli.Context) error {
 	log.Println("entry point -> begin")
-	//rc := nil //core.main(context)
+	rc := core.main(context)
 
 	log.Printf("entry point -> end")
 	return nil
