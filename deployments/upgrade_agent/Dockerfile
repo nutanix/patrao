@@ -1,4 +1,5 @@
-FROM golang
+FROM golang:1.12.4
+
 
 WORKDIR /upgrade_agent
 

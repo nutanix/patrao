@@ -1,4 +1,4 @@
-package main //import github.com/nutanix/patrao/
+package main
 
 import (
 	"os"
@@ -35,17 +35,18 @@ func start(context *cli.Context) error {
 	return rc
 }
 
-func setupAppFlags(app *cli.App) {
-	app.Flags = []cli.Flag{
+func setupAppFlags() []cli.Flag {
+
+	return []cli.Flag{
 		cli.StringFlag{
-			Name:   "host",
-			Usage:  "daemon socket to connect to docker",
-			Value:  "unix:///var/run/docker.sock",
-			EnvVar: "PATRAO_DOCKER_HOST",
+			Name:   core.HostName,
+			Usage:  core.HostUsage,
+			Value:  core.HostValue,
+			EnvVar: core.HostEnvVar,
 		},
 		cli.BoolFlag{
-			Name:  "run-once",
-			Usage: "Run once now and exit",
+			Name:  core.RunOnceName,
+			Usage: core.RunOnceUsage,
 		},
 	}
 }
@@ -61,7 +62,7 @@ func main() {
 	app.After = after
 	app.Action = start
 
-	setupAppFlags(app)
+	app.Flags = setupAppFlags()
 
 	if err := app.Run(os.Args); err != nil {
 		log.Fatal(err)

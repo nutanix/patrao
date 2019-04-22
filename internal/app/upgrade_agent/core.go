@@ -12,7 +12,7 @@ func Main(context *cli.Context) error {
 		return runOnce(context)
 	}
 
-	return shchedulePereodicUpgrades(context)
+	return schedulePeriodicUpgrades(context)
 }
 
 func runOnce(context *cli.Context) error {
@@ -21,8 +21,8 @@ func runOnce(context *cli.Context) error {
 	return nil
 }
 
-func shchedulePereodicUpgrades(context *cli.Context) error {
-	log.Infoln("shchedulePereodicUpgrades()")
+func schedulePeriodicUpgrades(context *cli.Context) error {
+	log.Infoln("schedulePeriodicUpgrades()")
 
 	return nil
 }
