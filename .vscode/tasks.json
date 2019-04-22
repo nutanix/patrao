@@ -1,0 +1,38 @@
+{
+	"version": "2.0.0",	
+	"type": "shell",	
+	"echoCommand": true,
+	"cwd": "${workspaceFolder}/cmd/upgrade_agent/",
+	"tasks": [
+		{
+			"label": "1. upgrade_agent_build_deploy",
+			"command": "cd ${workspaceFolder}/cmd/upgrade_agent/ && rm -rf ./upgrade_agent && rm -rf ${workspaceFolder}/deployments/upgrade_agent/upgrade_agent && GOOS=linux GOARCH=amd64 go build && cp ./upgrade_agent ${workspaceFolder}/deployments/upgrade_agent/",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": [
+				"$go"
+			]
+		},
+		{
+			"label": "2. upgrade_agent_create_image",
+			"command": "cd ${workspaceFolder}/deployments/upgrade_agent/ && docker image remove -f patrao_upgrade_agent && docker build --tag=patrao_upgrade_agent .",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		},
+		{
+			"label": "3. upgrade_agent_run_image",
+			"command": "docker run patrao_upgrade_agent",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"problemMatcher": []
+		}
+
+	]
+}
