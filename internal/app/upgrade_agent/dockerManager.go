@@ -70,9 +70,9 @@ func (client dockerClient) ListContainers(fn Filter) ([]Container, error) {
 
 		c := Container{containerInfo: &containerInfo, imageInfo: &imageInfo}
 
-		if fn(c) {
-			cs = append(cs, c)
-		}
+		//		if fn(c) {
+		cs = append(cs, c)
+		//		}
 	}
 
 	return cs, nil

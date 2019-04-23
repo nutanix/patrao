@@ -5,10 +5,16 @@ import (
 	"github.com/urfave/cli"
 )
 
+var (
+	client Client
+)
+
 // Main - Upgrade Agent entry point
 func Main(context *cli.Context) error {
 
-	if context.GlobalBool("run-once") {
+	client = NewClient(false)
+
+	if context.GlobalBool(RunOnceName) {
 		return runOnce(context)
 	}
 
@@ -18,7 +24,17 @@ func Main(context *cli.Context) error {
 func runOnce(context *cli.Context) error {
 	log.Infoln("runOnce()")
 
-	return nil
+	filter := BuildFilter(context.Args(), true)
+	containers, rc := client.ListContainers(filter)
+
+	if rc != nil {
+		log.Fatal(rc)
+	}
+	// for debug. don't forget to remove!
+	log.Info(containers)
+	//
+
+	return rc
 }
 
 func schedulePeriodicUpgrades(context *cli.Context) error {
