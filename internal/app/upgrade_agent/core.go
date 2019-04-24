@@ -30,9 +30,22 @@ func runOnce(context *cli.Context) error {
 	if rc != nil {
 		log.Fatal(rc)
 	}
-	// for debug. don't forget to remove!
-	log.Info(containers)
-	//
+
+	for _, element := range containers {
+		log.Infof("try to stop container %s", element.Name())
+
+		if err := client.StopContainer(element, 0); err != nil {
+			log.Fatal(err)
+		}
+	}
+
+	for _, element := range containers {
+		log.Infof("try to start container %s", element.Name())
+
+		if err := client.StartContainer(element); nil != err {
+			log.Fatal(err)
+		}
+	}
 
 	return rc
 }

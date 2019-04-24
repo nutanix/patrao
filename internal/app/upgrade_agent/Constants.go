@@ -17,3 +17,6 @@ const RunOnceName = "run-once"
 
 // RunOnceUsage is description of RunOnceName
 const RunOnceUsage = "Run once now and exit"
+
+// DefaultStopSignal is default stop signal
+const DefaultStopSignal = "SIGTERM"

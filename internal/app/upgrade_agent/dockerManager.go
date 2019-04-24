@@ -82,7 +82,7 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 	bg := context.Background()
 	signal := c.StopSignal()
 	if signal == "" {
-		//signal = defaultStopSignal
+		signal = DefaultStopSignal
 	}
 
 	log.Infof("Stopping %s (%s) with %s", c.Name(), c.ID(), signal)
