@@ -8,12 +8,12 @@ type Filter func(FilterableContainer) bool
 // containers.
 type FilterableContainer interface {
 	Name() string
-	IsWatchtower() bool
+	IsPatraoUpgradeAgent() bool
 	Enabled() (bool, bool)
 }
 
 // WatchtowerContainersFilter filters only watchtower containers
-func WatchtowerContainersFilter(c FilterableContainer) bool { return c.IsWatchtower() }
+func WatchtowerContainersFilter(c FilterableContainer) bool { return c.IsPatraoUpgradeAgent() }
 
 // Filter no containers and returns all
 func noFilter(FilterableContainer) bool { return true }

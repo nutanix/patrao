@@ -20,3 +20,6 @@ const RunOnceUsage = "Run once now and exit"
 
 // DefaultStopSignal is default stop signal
 const DefaultStopSignal = "SIGTERM"
+
+// PatraoAgentContainerName is container name of Patrao Agent
+const PatraoAgentContainerName = "/patrao_agent"

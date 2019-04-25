@@ -27,11 +27,11 @@ func after(context *cli.Context) error {
 }
 
 func start(context *cli.Context) error {
-	log.Println("entry point -> begin")
+	log.Infoln("entry point -> begin")
 
 	rc := core.Main(context)
 
-	log.Printf("entry point -> end")
+	log.Infoln("entry point -> end")
 	return rc
 }
 

@@ -10,10 +10,10 @@ import (
 )
 
 const (
-	watchtowerLabel = "com.centurylinklabs.watchtower"
-	signalLabel     = "com.centurylinklabs.watchtower.stop-signal"
-	enableLabel     = "com.centurylinklabs.watchtower.enable"
-	zodiacLabel     = "com.centurylinklabs.zodiac.original-image"
+	patraoAgentLabel = "com.centurylinklabs.patrao_agent"
+	signalLabel      = "com.centurylinklabs.watchtower.stop-signal"
+	enableLabel      = "com.centurylinklabs.watchtower.enable"
+	zodiacLabel      = "com.centurylinklabs.zodiac.original-image"
 )
 
 // NewContainer returns a new Container instance instantiated with the
@@ -97,12 +97,12 @@ func (c Container) Links() []string {
 	return links
 }
 
-// IsWatchtower returns a boolean flag indicating whether or not the current
+// IsPatraoUpgradeAgent returns a boolean flag indicating whether or not the current
 // container is the watchtower container itself. The watchtower container is
 // identified by the presence of the "com.centurylinklabs.watchtower" label in
 // the container metadata.
-func (c Container) IsWatchtower() bool {
-	return ContainsWatchtowerLabel(c.containerInfo.Config.Labels)
+func (c Container) IsPatraoUpgradeAgent() bool {
+	return ContainsPatraoAgentLabel(c.containerInfo.Config.Labels)
 }
 
 // StopSignal returns the custom stop signal (if any) that is encoded in the
@@ -182,9 +182,9 @@ func (c Container) hostConfig() *dockercontainer.HostConfig {
 	return hostConfig
 }
 
-// ContainsWatchtowerLabel takes a map of labels and values and tells
+// ContainsPatraoAgentLabel takes a map of labels and values and tells
 // the consumer whether it contains a valid watchtower instance label
-func ContainsWatchtowerLabel(labels map[string]string) bool {
-	val, ok := labels[watchtowerLabel]
+func ContainsPatraoAgentLabel(labels map[string]string) bool {
+	val, ok := labels[patraoAgentLabel]
 	return ok && val == "true"
 }
