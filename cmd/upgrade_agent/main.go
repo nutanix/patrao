@@ -44,6 +44,12 @@ func setupAppFlags() []cli.Flag {
 			Value:  core.HostValue,
 			EnvVar: core.HostEnvVar,
 		},
+		cli.StringFlag{
+			Name:   core.UpstreamName,
+			Usage:  core.UpstreamUsage,
+			Value:  core.UpstreamValue,
+			EnvVar: core.UpstreamEnvVar,
+		},
 		cli.BoolFlag{
 			Name:  core.RunOnceName,
 			Usage: core.RunOnceUsage,

@@ -23,3 +23,15 @@ const DefaultStopSignal = "SIGTERM"
 
 // PatraoAgentContainerName is container name of Patrao Agent
 const PatraoAgentContainerName = "/patrao_agent"
+
+// UpstreamName is command line parameter name
+const UpstreamName = "upstreamHost"
+
+// UpstreamUsage is description of UpstreamName
+const UpstreamUsage = "upstream host name"
+
+// UpstreamValue is default value for UpstreamName
+const UpstreamValue = "http://localhost:1080/"
+
+// UpstreamEnvVar is env variable for UpstreamName
+const UpstreamEnvVar = "PATRAO_UPSTREAM_HOST"

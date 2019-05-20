@@ -54,6 +54,22 @@ type Deployment struct {
 	NodeUUID  string
 }
 
+// CurrentContainerVersion structure present container infor for request to upstream api
+type CurrentContainerVersion struct {
+	ID      string
+	CREATED string
+	NAME    string
+	IMAGE   string
+}
+
+// NewContainerVersion structure present information about new version of running container
+type NewContainerVersion struct {
+	ID            string
+	NAME          string
+	IMAGE         string
+	DeleteVolumes bool `json:"DELETE_VOLUMES"`
+}
+
 // NewNode create and setup a new instance of Node structure
 func NewNode() (obj *Node) {
 	obj = new(Node)
