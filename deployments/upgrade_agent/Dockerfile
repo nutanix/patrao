@@ -1,10 +1,11 @@
-FROM golang:1.12.4
+FROM centos:latest
 
 
 WORKDIR /upgrade_agent
 
 COPY . ./upgrade_agent
-
+RUN curl -L https://github.com/docker/compose/releases/download/1.23.2/docker-compose-`uname -s`-`uname -m` -o ./upgrade_agent/docker-compose
+RUN chmod +x ./upgrade_agent/docker-compose
 # temporary value
 EXPOSE 1533
 

@@ -31,7 +31,10 @@ const UpstreamName = "upstreamHost"
 const UpstreamUsage = "upstream host name"
 
 // UpstreamValue is default value for UpstreamName
-const UpstreamValue = "http://localhost:1080/"
+const UpstreamValue = "http://localhost:1080"
+
+// UpstreamGetUpgrade is template for http get request to Upstream Service
+const UpstreamGetUpgrade = "/v1/node/test_node_id/request/upgrade/"
 
 // UpstreamEnvVar is env variable for UpstreamName
 const UpstreamEnvVar = "PATRAO_UPSTREAM_HOST"

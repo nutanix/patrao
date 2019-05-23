@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"time"
 
 	uuid "github.com/nu7hatch/gouuid"
@@ -54,6 +55,7 @@ type Deployment struct {
 	NodeUUID  string
 }
 
+/*
 // CurrentContainerVersion structure present container infor for request to upstream api
 type CurrentContainerVersion struct {
 	ID      string
@@ -68,6 +70,24 @@ type NewContainerVersion struct {
 	NAME          string
 	IMAGE         string
 	DeleteVolumes bool `json:"DELETE_VOLUMES"`
+}
+*/
+
+// UpstreamResponseUpgradeInfo structure represent response from Upstream Service
+type UpstreamResponseUpgradeInfo struct {
+	Name          string
+	Spec          string
+	DeleteVolumes string
+}
+
+// SolutionNameNotFound struct present error when agent couldn't find solution name by container name
+type SolutionNameNotFound struct {
+	When time.Time
+	What string
+}
+
+func (e SolutionNameNotFound) Error() string {
+	return fmt.Sprintf("%v: %v", e.When, e.What)
 }
 
 // NewNode create and setup a new instance of Node structure

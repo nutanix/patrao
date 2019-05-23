@@ -1,10 +1,13 @@
 package core
 
 import (
-	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
+	"time"
+
+	"strings"
 
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
@@ -37,69 +40,104 @@ func runOnce(context *cli.Context) error {
 		log.Fatal(rc)
 	}
 
-	if 0 == len(containers) {
-		log.Info("There are no running containers at the moment")
-		return rc
-	}
+	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
 
-	containerInfo, err := createRequest(&containers)
+	log.Infof("URL path: %s", getURLPath)
 
-	if nil != err {
-		log.Fatal(err)
-	}
+	var solutions []string
+	var upgradeInfoArray []UpstreamResponseUpgradeInfo
 
-	request, _ := json.Marshal(containerInfo)
-	log.Infof("Request to upstream service: %s", string(request))
+	for _, current := range containers {
+		currentSolution, err := getSolutionName(current.Name())
 
-	resp, rc := http.Post(context.GlobalString(UpstreamName), "json", bytes.NewBuffer(request))
-
-	if nil != rc {
-		log.Fatal(rc)
-	}
-
-	defer resp.Body.Close()
-
-	body, rc := ioutil.ReadAll(resp.Body)
-
-	if nil != rc {
-		log.Fatal(rc)
-	}
-
-	log.Infof("Response from upstream service: %s", string(body))
-
-	var newContainers []NewContainerVersion
-
-	rc = json.Unmarshal([]byte(body), &newContainers)
-
-	log.Info(newContainers)
-
-	/*	for _, element := range containers {
-			log.Infof("try to stop container [%s]", element.Name())
-
-			if err := client.StopContainer(element, 0); err != nil {
-				log.Infoln(err)
-				continue
-			}
-
-			log.Infof("container is stopped [%s]", element.Name())
+		if nil != err {
+			log.Error(err)
+			continue
 		}
 
-		//
-		log.Info("wait for 10 seconds.................")
-		time.Sleep(10 * time.Second)
-		//
+		if contains(&solutions, &currentSolution) {
+			continue
+		}
+		solutions = append(solutions, currentSolution)
 
-		for _, element := range containers {
-			log.Infof("try to start container [%s]", element.Name())
+		currentPath := getURLPath + currentSolution
+		log.Infof("GET to Upstream: %s", currentPath)
 
-			if err := client.StartContainer(element); nil != err {
-				log.Fatal(err)
-				continue
-			}
-			log.Infof("container is started [%s]", element.Name())
+		resp, rc := http.Get(currentPath)
+
+		if nil != rc {
+			log.Error(rc)
+			continue
 		}
 
-		log.Infoln("[-]runOnce()")
+		defer resp.Body.Close()
+
+		body, rc := ioutil.ReadAll(resp.Body)
+
+		if nil != rc {
+			log.Error(rc)
+			continue
+		}
+
+		log.Infof("Response from upstream service: %s", string(body))
+
+		var toUpgrade UpstreamResponseUpgradeInfo
+		rc = json.Unmarshal([]byte(body), &toUpgrade)
+
+		if nil != rc {
+			log.Error(rc)
+			continue
+		}
+
+		upgradeInfoArray = append(upgradeInfoArray, toUpgrade)
+	}
+
+	for _, item := range upgradeInfoArray {
+		for _, container := range containers {
+			name, _ := getSolutionName(container.Name())
+			if item.Name == name {
+				err := client.StopContainer(container, 0)
+				if nil != err {
+					// TBD
+				}
+			}
+		}
+
+	}
+
+	/*	var newContainers []NewContainerVersion
+
+		rc = json.Unmarshal([]byte(body), &newContainers)
+
+		log.Info(newContainers)
+
+			for _, element := range containers {
+				log.Infof("try to stop container [%s]", element.Name())
+
+				if err := client.StopContainer(element, 0); err != nil {
+					log.Infoln(err)
+					continue
+				}
+
+				log.Infof("container is stopped [%s]", element.Name())
+			}
+
+			//
+			log.Info("wait for 10 seconds.................")
+			time.Sleep(10 * time.Second)
+			//
+
+			for _, element := range containers {
+				log.Infof("try to start container [%s]", element.Name())
+
+				if err := client.StartContainer(element); nil != err {
+					log.Fatal(err)
+					continue
+				}
+				log.Infof("container is started [%s]", element.Name())
+			}
+
+			log.Infoln("[-]runOnce()")
 	*/
 
 	return rc
@@ -117,6 +155,35 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 	return nil
 }
 
+func contains(names *[]string, item *string) bool {
+	for _, it := range *names {
+		if it == *item {
+			return true
+		}
+	}
+	return false
+}
+
+func getSolutionName(containerName string) (string, error) {
+	var (
+		err error
+		rc  string
+	)
+
+	slice := strings.Split(containerName, "_")
+
+	if 0 == len(slice) {
+		err = SolutionNameNotFound{
+			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
+			fmt.Sprintf("getSolutionName(): can't identify solution name [%s]", containerName),
+		}
+		return rc, err
+	}
+
+	return slice[0][1:], err
+}
+
+/*
 func createRequest(containers *[]Container) ([]CurrentContainerVersion, error) {
 	var (
 		err error
@@ -137,3 +204,4 @@ func createRequest(containers *[]Container) ([]CurrentContainerVersion, error) {
 
 	return rc, err
 }
+*/
