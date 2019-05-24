@@ -33,6 +33,12 @@ const UpstreamUsage = "upstream host name"
 // UpstreamValue is default value for UpstreamName
 const UpstreamValue = "http://localhost:1080"
 
+// DockerComposeFileName is defaut file name for *.yml scripts
+const DockerComposeFileName = "docker-compose.yml"
+
+// DockerComposeCommand is command name of compose service
+const DockerComposeCommand = "docker-compose"
+
 // UpstreamGetUpgrade is template for http get request to Upstream Service
 const UpstreamGetUpgrade = "/v1/node/test_node_id/request/upgrade/"
 

@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"os"
+	"os/exec"
+	"path/filepath"
 	"time"
 
 	"strings"
@@ -15,11 +18,15 @@ import (
 )
 
 var (
-	client Client
+	client   Client
+	rootPath string
 )
 
 // Main - Upgrade Agent entry point
 func Main(context *cli.Context) error {
+
+	ex, _ := os.Executable()
+	rootPath = filepath.Dir(ex)
 
 	client = NewClient(false)
 
@@ -58,13 +65,11 @@ func runOnce(context *cli.Context) error {
 		if contains(&solutions, &currentSolution) {
 			continue
 		}
-		solutions = append(solutions, currentSolution)
 
+		solutions = append(solutions, currentSolution)
 		currentPath := getURLPath + currentSolution
-		log.Infof("GET to Upstream: %s", currentPath)
 
 		resp, rc := http.Get(currentPath)
-
 		if nil != rc {
 			log.Error(rc)
 			continue
@@ -73,13 +78,10 @@ func runOnce(context *cli.Context) error {
 		defer resp.Body.Close()
 
 		body, rc := ioutil.ReadAll(resp.Body)
-
 		if nil != rc {
 			log.Error(rc)
 			continue
 		}
-
-		log.Infof("Response from upstream service: %s", string(body))
 
 		var toUpgrade UpstreamResponseUpgradeInfo
 		rc = json.Unmarshal([]byte(body), &toUpgrade)
@@ -98,47 +100,55 @@ func runOnce(context *cli.Context) error {
 			if item.Name == name {
 				err := client.StopContainer(container, 0)
 				if nil != err {
+					log.Error(err)
 					// TBD
+					continue
 				}
 			}
 		}
+		if _, isFileExist := os.Stat(item.Name); !os.IsNotExist(isFileExist) {
+			os.RemoveAll(item.Name)
+		}
+		err := os.Mkdir(item.Name, os.ModePerm)
+		if nil != err {
+			log.Error(err)
+			// TBD
+			continue
+		}
+		defer os.Remove(item.Name)
+		dockerComposeFileName := fmt.Sprintf("%s/%s", item.Name, DockerComposeFileName)
 
+		f, err := os.Create(dockerComposeFileName)
+		if err != nil {
+			log.Error(err)
+			continue
+			//TBD
+		}
+		defer func() {
+			f.Close()
+			os.Remove(dockerComposeFileName)
+		}()
+
+		_, err = f.Write([]byte(item.Spec)[:len(item.Spec)])
+		if nil != err {
+			log.Error(err)
+			// TBD
+			continue
+		}
+
+		log.Infof("Launching solution [%s]", item.Name)
+		cmd := exec.Command(DockerComposeCommand, "-f", fmt.Sprintf("%s/%s", rootPath, dockerComposeFileName), "up", "-d")
+		err = cmd.Run()
+
+		if nil != err {
+			log.Error(err)
+			// TBD
+			continue
+		}
+		log.Infof("Solution [%s] is successful launched", item.Name)
 	}
 
-	/*	var newContainers []NewContainerVersion
-
-		rc = json.Unmarshal([]byte(body), &newContainers)
-
-		log.Info(newContainers)
-
-			for _, element := range containers {
-				log.Infof("try to stop container [%s]", element.Name())
-
-				if err := client.StopContainer(element, 0); err != nil {
-					log.Infoln(err)
-					continue
-				}
-
-				log.Infof("container is stopped [%s]", element.Name())
-			}
-
-			//
-			log.Info("wait for 10 seconds.................")
-			time.Sleep(10 * time.Second)
-			//
-
-			for _, element := range containers {
-				log.Infof("try to start container [%s]", element.Name())
-
-				if err := client.StartContainer(element); nil != err {
-					log.Fatal(err)
-					continue
-				}
-				log.Infof("container is started [%s]", element.Name())
-			}
-
-			log.Infoln("[-]runOnce()")
-	*/
+	log.Infoln("[-]runOnce()")
 
 	return rc
 }
@@ -182,26 +192,3 @@ func getSolutionName(containerName string) (string, error) {
 
 	return slice[0][1:], err
 }
-
-/*
-func createRequest(containers *[]Container) ([]CurrentContainerVersion, error) {
-	var (
-		err error
-		rc  []CurrentContainerVersion
-	)
-
-	for _, item := range *containers {
-		current := new(CurrentContainerVersion)
-
-		current.ID = "container-id"    // TBD will be changed to ID according specifications
-		current.CREATED = "DD.MM.YYYY" // TBD will be changed to real created data according specifications
-		current.NAME = item.Name()[1:]
-		current.IMAGE = item.ImageName()
-
-		rc = append(rc, *current)
-
-	}
-
-	return rc, err
-}
-*/

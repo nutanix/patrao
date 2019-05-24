@@ -12,27 +12,17 @@ func before(context *cli.Context) error {
 	if context.GlobalBool("debug") {
 		log.SetLevel(log.DebugLevel)
 	}
-
-	log.Infoln("before action")
-
 	// TBD
 	return nil
 }
 
 func after(context *cli.Context) error {
-	log.Infoln("after action")
-
 	// TBD
 	return nil
 }
 
 func start(context *cli.Context) error {
-	log.Infoln("entry point -> begin")
-
-	rc := core.Main(context)
-
-	log.Infoln("entry point -> end")
-	return rc
+	return core.Main(context)
 }
 
 func setupAppFlags() []cli.Flag {
