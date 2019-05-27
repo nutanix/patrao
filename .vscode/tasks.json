@@ -26,7 +26,7 @@
 		},
 		{
 			"label": "3. upgrade_agent_run_image",
-			"command": "docker container prune -f && docker run --expose 1080/tcp -v /Users/dgritsay/Documents/Projects/Nutanix/test:/host/test -v /usr/local/bin:/usr/local/bin:ro -v /var/run/docker.sock:/var/run/docker.sock:ro --name patrao_agent patrao_upgrade_agent",
+			"command": "docker container prune -f && docker run --expose 1080/tcp -v /var/run/docker.sock:/var/run/docker.sock:ro --name patrao_agent patrao_upgrade_agent",
 			"group": {
 				"kind": "build",
 				"isDefault": true

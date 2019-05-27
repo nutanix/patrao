@@ -3,13 +3,13 @@ FROM centos:latest
 
 WORKDIR /upgrade_agent
 
-COPY . ./upgrade_agent
-RUN curl -L https://github.com/docker/compose/releases/download/1.23.2/docker-compose-`uname -s`-`uname -m` -o ./upgrade_agent/docker-compose
-RUN chmod +x ./upgrade_agent/docker-compose
-# temporary value
-EXPOSE 1533
+COPY . ./
+RUN curl -L https://github.com/docker/compose/releases/download/1.23.2/docker-compose-`uname -s`-`uname -m` -o ./docker-compose && chmod +x ./docker-compose && ln -s /upgrade_agent/docker-compose /usr/local/bin/docker-compose
 
-# default poll interval is 30m
-ENV UPGRADE_AGENT_POLL_INTERVAL_S 1800
+# upstream service port number
+EXPOSE 1080
 
-CMD ["./upgrade_agent/upgrade_agent"]
+# default poll interval is 1 hour
+ENV PATRAO_UPGRADE_INTERVAL_S 60
+
+CMD ["./upgrade_agent", "--upstreamHost=http://192.168.1.58:1080"]

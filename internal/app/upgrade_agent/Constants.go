@@ -33,6 +33,9 @@ const UpstreamUsage = "upstream host name"
 // UpstreamValue is default value for UpstreamName
 const UpstreamValue = "http://localhost:1080"
 
+// UpstreamEnvVar is env variable for UpstreamName
+const UpstreamEnvVar = "PATRAO_UPSTREAM_HOST"
+
 // DockerComposeFileName is defaut file name for *.yml scripts
 const DockerComposeFileName = "docker-compose.yml"
 
@@ -42,5 +45,14 @@ const DockerComposeCommand = "docker-compose"
 // UpstreamGetUpgrade is template for http get request to Upstream Service
 const UpstreamGetUpgrade = "/v1/node/test_node_id/request/upgrade/"
 
-// UpstreamEnvVar is env variable for UpstreamName
-const UpstreamEnvVar = "PATRAO_UPSTREAM_HOST"
+// UpgradeIntervalName is command line parameter name
+const UpgradeIntervalName = "upgradeInterval"
+
+// UpgradeIntervalUsage is description of UpgradeIntervalName
+const UpgradeIntervalUsage = "upgrade interval in seconds (default is 1 hour)"
+
+// UpgradeIntervalValue is default value for UpgradeIntervalName in seconds (3600 seconds is 1 hour default value)
+const UpgradeIntervalValue = "3600"
+
+// UpgradeIntervalValueEnvVar is env variable for UpgradeIntervalName
+const UpgradeIntervalValueEnvVar = "PATRAO_UPGRADE_INTERVAL_S"
