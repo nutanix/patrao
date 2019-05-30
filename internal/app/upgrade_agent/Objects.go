@@ -55,6 +55,13 @@ type Deployment struct {
 	NodeUUID  string
 }
 
+// ContainerSpec Represents solution information from received from Docker-compose specification
+type ContainerSpec struct {
+	Name  string
+	Image string
+	//TBD
+}
+
 /*
 // CurrentContainerVersion structure present container infor for request to upstream api
 type CurrentContainerVersion struct {

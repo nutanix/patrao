@@ -56,3 +56,9 @@ const UpgradeIntervalValue = "3600"
 
 // UpgradeIntervalValueEnvVar is env variable for UpgradeIntervalName
 const UpgradeIntervalValueEnvVar = "PATRAO_UPGRADE_INTERVAL_S"
+
+// DockerComposeImageName image section name. related to docker-compose.yml
+const DockerComposeImageName = "image"
+
+// DockerComposeServicesName services section name. related to docker-compose.yml
+const DockerComposeServicesName = "services"

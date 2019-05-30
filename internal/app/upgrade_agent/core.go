@@ -15,6 +15,7 @@ import (
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
+	"gopkg.in/yaml.v2"
 )
 
 var (
@@ -81,23 +82,24 @@ func contains(names *[]string, item *string) bool {
 	return false
 }
 
-func getSolutionName(containerName string) (string, error) {
+func getSolutionAndServiceName(containerName string) (string, string, error) {
 	var (
 		err error
 		rc  string
 	)
 
 	slice := strings.Split(containerName, "_")
+	length := len(slice)
 
-	if 0 == len(slice) {
+	if 0 == length || 2 > length {
 		err = SolutionNameNotFound{
 			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
 			fmt.Sprintf("getSolutionName(): can't identify solution name [%s]", containerName),
 		}
-		return rc, err
+		return rc, rc, err
 	}
 
-	return slice[0][1:], err
+	return slice[0][1:], slice[1], err
 }
 
 func getLaunchedSolutionsList(containers *[]Container, context *cli.Context) ([]UpstreamResponseUpgradeInfo, error) {
@@ -111,7 +113,7 @@ func getLaunchedSolutionsList(containers *[]Container, context *cli.Context) ([]
 	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
 
 	for _, current := range *containers {
-		currentSolution, err := getSolutionName(current.Name())
+		currentSolution, _, err := getSolutionAndServiceName(current.Name())
 
 		if nil != err {
 			log.Error(err)
@@ -158,8 +160,12 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 
 	log.Info("[+]doUpgradeSolutions")
 	for _, item := range *upgradeInfoList {
+		if !isNewVersion(&item, containers) {
+			log.Infof("Solution [%s] is up-to-date.", item.Name)
+			continue
+		}
 		for _, container := range *containers {
-			name, _ := getSolutionName(container.Name())
+			name, _, _ := getSolutionAndServiceName(container.Name())
 			if item.Name == name {
 				err := client.StopContainer(container, 0)
 				if nil != err {
@@ -212,5 +218,51 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 		log.Infof("Solution [%s] is successful launched", item.Name)
 	}
 	log.Info("[-]doUpgradeSolutions")
+	return rc
+}
+
+func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Container) bool {
+	var rc bool
+
+	rc = false
+	containersSpec := make(map[string]ContainerSpec)
+	specMap := make(map[interface{}]interface{})
+	err := yaml.Unmarshal([]byte(upgradeInfo.Spec), specMap)
+	if nil != err {
+		log.Error(err)
+		return false
+	}
+	if val, isExist := specMap[DockerComposeServicesName]; isExist {
+		servicesMap := val.(map[interface{}]interface{})
+		for service := range servicesMap {
+			var (
+				serviceImageName string
+				isFound          bool
+			)
+			detailes := servicesMap[service].(map[interface{}]interface{})
+			isFound = false
+			for item := range detailes {
+				if DockerComposeImageName == item {
+					serviceImageName = detailes[item].(string)
+					isFound = true
+					break
+				}
+			}
+			if isFound {
+
+				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
+			}
+		}
+		for _, container := range *containers {
+			solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
+			val, exist := containersSpec[serviceName]
+			if (upgradeInfo.Name == solutionName) && (exist) {
+				if container.ImageName() != val.Image {
+					rc = true
+					break
+				}
+			}
+		}
+	}
 	return rc
 }
