@@ -3,23 +3,10 @@ package main
 import (
 	"os"
 
-	core "github.com/nutanix/patrao/internal/app/upgrade_agent"
+	core "github.com/nutanix/patrao/internal/app/upgradeagent"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
-
-func before(context *cli.Context) error {
-	if context.GlobalBool("debug") {
-		log.SetLevel(log.DebugLevel)
-	}
-	// TBD
-	return nil
-}
-
-func after(context *cli.Context) error {
-	// TBD
-	return nil
-}
 
 func start(context *cli.Context) error {
 	return core.Main(context)
@@ -53,15 +40,17 @@ func setupAppFlags() []cli.Flag {
 	}
 }
 
+func createApp() *cli.App {
+	return cli.NewApp()
+}
+
 func main() {
 	log.SetLevel(log.InfoLevel)
 
-	app := cli.NewApp()
+	app := createApp()
 
-	app.Name = "Patrao Upgrade Agent"
-	app.Usage = "Upgrade service for automatically upgrade docker based solutions"
-	app.Before = before
-	app.After = after
+	app.Name = core.ApplicationName
+	app.Usage = core.ApplicationUsage
 	app.Action = start
 
 	app.Flags = setupAppFlags()

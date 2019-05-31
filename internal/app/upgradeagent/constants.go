@@ -1,5 +1,11 @@
 package core
 
+// ApplicationName is literal name of applicaton
+const ApplicationName = "Patrao Upgrade Agent"
+
+// ApplicationUsage is description of application
+const ApplicationUsage = "Upgrade service for automatically upgrade docker based solutions"
+
 // HostName is command line parameter name
 const HostName = "host"
 

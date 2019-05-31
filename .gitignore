@@ -1,2 +1,3 @@
-cmd/upgrade_agent/upgrade_agent
-deployments/upgrade_agent/upgrade_agent
+cmd/upgradeagent/upgradeagent
+deployments/upgradeagent/upgradeagent
+deployments/upgradeagent/

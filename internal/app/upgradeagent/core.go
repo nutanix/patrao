@@ -19,7 +19,7 @@ import (
 )
 
 var (
-	client   Client
+	client   DockerClient
 	rootPath string
 )
 
@@ -41,8 +41,7 @@ func Main(context *cli.Context) error {
 func runOnce(context *cli.Context) error {
 	log.Infoln("[+]runOnce()")
 
-	filter := BuildFilter(make([]string, 0), false)
-	containers, rc := client.ListContainers(filter)
+	containers, rc := client.ListContainers()
 	if nil != rc {
 		log.Error(rc)
 		return rc

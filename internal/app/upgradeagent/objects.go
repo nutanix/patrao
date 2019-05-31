@@ -8,27 +8,27 @@ import (
 	log "github.com/sirupsen/logrus"
 )
 
-// KindTYPE Kind type for all structures
-type KindTYPE string
+// KindType Kind type for all structures
+type KindType string
 
 // constants represent values of Kind field
 const (
-	NodeKind        KindTYPE = "node"
+	NodeKind        KindType = "node"
 	AppTemplateKind          = "apptemplate"
 	DeploymentKind           = "deployment"
 )
 
-// SubTYPE SubType data type
-type SubTYPE string
+// KindSubType SubType data type
+type KindSubType string
 
 // constants represent values for SubType
 const (
-	DockerCompose SubTYPE = "docker-compose"
+	DockerCompose KindSubType = "docker-compose"
 )
 
 // Node Identifies an individual VM uniquely, based on its node uuid.
 type Node struct {
-	Kind      KindTYPE
+	Kind      KindType
 	UUID      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -38,8 +38,8 @@ type Node struct {
 // AppTemplate A docker compose (or similar) spec with additional metadata that identifies a particular application by name.
 // The combination of name (service or project name) and version is a unique identifier for an app template.
 type AppTemplate struct {
-	Kind      KindTYPE
-	SubType   SubTYPE
+	Kind      KindType
+	SubType   KindSubType
 	UUID      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -48,7 +48,7 @@ type AppTemplate struct {
 
 // Deployment  An instance of an AppTemplate deployed on a Node.
 type Deployment struct {
-	Kind      KindTYPE
+	Kind      KindType
 	UUID      string
 	CreatedAt time.Time
 	UpdatedAt time.Time
@@ -94,39 +94,32 @@ type SolutionNameNotFound struct {
 }
 
 func (e SolutionNameNotFound) Error() string {
-	return fmt.Sprintf("%v: %v", e.When, e.What)
+	return fmt.Sprintf("%v at %v", e.When, e.What)
 }
 
 // NewNode create and setup a new instance of Node structure
-func NewNode() (obj *Node) {
-	obj = new(Node)
-
-	obj.Kind = NodeKind
-	obj.UUID = genUUID()
-	obj.NodeUUID = genNodeUUID()
-
-	return
+func NewNode() *Node {
+    return &Node {
+        Kind: NodeKind,
+        UUID: genUUID(),
+        NodeUUID: genNodeUUID(),
+    }
 }
 
 // NewAppTemplate create and setup a new instance of AppTemplate structure
-func NewAppTemplate() (obj *AppTemplate) {
-	obj = new(AppTemplate)
-
-	obj.Kind = AppTemplateKind
-	obj.UUID = genUUID()
-
-	return
+func NewAppTemplate() *AppTemplate {
+	return &AppTemplate{
+		Kind : AppTemplateKind,
+		UUID : genUUID(),
+	}
 }
 
 // NewDeployment create and setup a new instance of Deployment structure
-func NewDeployment() (obj *Deployment) {
-	obj = new(Deployment)
-
-	obj.Kind = DeploymentKind
-	obj.UUID = genUUID()
-	obj.NodeUUID = genNodeUUID()
-
-	return
+func NewDeployment() *Deployment {
+	return &Deployment{
+		Kind : DeploymentKind,
+		UUID : genUUID(),
+	}
 }
 
 func genUUID() string {

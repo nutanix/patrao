@@ -12,9 +12,9 @@ import (
 	"golang.org/x/net/context"
 )
 
-// Client is interface which agent communicate with DockerAPI
-type Client interface {
-	ListContainers(Filter) ([]Container, error)
+// DockerClient is interface which agent communicate with DockerAPI
+type DockerClient interface {
+	ListContainers() ([]Container, error)
 	StopContainer(Container, time.Duration) error
 	StartContainer(Container) error
 	RenameContainer(Container, string) error
@@ -33,22 +33,20 @@ type dockerClient struct {
 //  * DOCKER_HOST			the docker-engine host to send api requests to
 //  * DOCKER_TLS_VERIFY		whether to verify tls certificates
 //  * DOCKER_API_VERSION	the minimum docker api version to work with
-func NewClient(pullImages bool) Client {
-	cli, err := dockerclient.NewEnvClient()
+func NewClient(pullImages bool) DockerClient {
+	client, err := dockerclient.NewEnvClient()
 
 	if err != nil {
 		log.Fatalf("Error instantiating Docker client: %s", err)
 	}
 
-	return dockerClient{api: cli, pullImages: pullImages}
+	return dockerClient{api: client, pullImages: pullImages}
 }
 
-func (client dockerClient) ListContainers(fn Filter) ([]Container, error) {
+func (client dockerClient) ListContainers() ([]Container, error) {
 	cs := []Container{}
 	bg := context.Background()
-
 	log.Debug("Retrieving running containers")
-
 	runningContainers, err := client.api.ContainerList(
 		bg,
 		types.ContainerListOptions{})
@@ -69,8 +67,6 @@ func (client dockerClient) ListContainers(fn Filter) ([]Container, error) {
 		}
 
 		c := Container{containerInfo: &containerInfo, imageInfo: &imageInfo}
-
-		//if fn(c) {
 		if PatraoAgentContainerName != c.Name() {
 			cs = append(cs, c)
 		}

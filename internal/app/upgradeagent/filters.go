@@ -18,22 +18,6 @@ func WatchtowerContainersFilter(c FilterableContainer) bool { return c.IsPatraoU
 // Filter no containers and returns all
 func noFilter(FilterableContainer) bool { return true }
 
-// Filters containers which don't have a specified name
-func filterByNames(names []string, baseFilter Filter) Filter {
-	if len(names) == 0 {
-		return baseFilter
-	}
-
-	return func(c FilterableContainer) bool {
-		for _, name := range names {
-			if (name == c.Name()) || (name == c.Name()[1:]) {
-				return baseFilter(c)
-			}
-		}
-		return false
-	}
-}
-
 // Filters out containers that don't have the 'enableLabel'
 func filterByEnableLabel(baseFilter Filter) Filter {
 	return func(c FilterableContainer) bool {
@@ -59,17 +43,4 @@ func filterByDisabledLabel(baseFilter Filter) Filter {
 
 		return baseFilter(c)
 	}
-}
-
-// BuildFilter creates the needed filter of containers
-func BuildFilter(names []string, enableLabel bool) Filter {
-	filter := noFilter
-	filter = filterByNames(names, filter)
-	if enableLabel {
-		// If label filtering is enabled, containers should only be considered
-		// if the label is specifically set.
-		filter = filterByEnableLabel(filter)
-	}
-	filter = filterByDisabledLabel(filter)
-	return filter
 }
