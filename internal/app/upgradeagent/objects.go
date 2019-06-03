@@ -99,26 +99,26 @@ func (e SolutionNameNotFound) Error() string {
 
 // NewNode create and setup a new instance of Node structure
 func NewNode() *Node {
-    return &Node {
-        Kind: NodeKind,
-        UUID: genUUID(),
-        NodeUUID: genNodeUUID(),
-    }
+	return &Node{
+		Kind:     NodeKind,
+		UUID:     genUUID(),
+		NodeUUID: genNodeUUID(),
+	}
 }
 
 // NewAppTemplate create and setup a new instance of AppTemplate structure
 func NewAppTemplate() *AppTemplate {
 	return &AppTemplate{
-		Kind : AppTemplateKind,
-		UUID : genUUID(),
+		Kind: AppTemplateKind,
+		UUID: genUUID(),
 	}
 }
 
 // NewDeployment create and setup a new instance of Deployment structure
 func NewDeployment() *Deployment {
 	return &Deployment{
-		Kind : DeploymentKind,
-		UUID : genUUID(),
+		Kind: DeploymentKind,
+		UUID: genUUID(),
 	}
 }
 

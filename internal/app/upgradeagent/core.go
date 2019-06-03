@@ -25,50 +25,38 @@ var (
 
 // Main - Upgrade Agent entry point
 func Main(context *cli.Context) error {
-
 	ex, _ := os.Executable()
 	rootPath = filepath.Dir(ex)
-
 	client = NewClient(false)
 
 	if context.GlobalBool(RunOnceName) {
 		return runOnce(context)
 	}
-
 	return schedulePeriodicUpgrades(context)
 }
 
 func runOnce(context *cli.Context) error {
 	log.Infoln("[+]runOnce()")
-
 	containers, rc := client.ListContainers()
 	if nil != rc {
 		log.Error(rc)
 		return rc
 	}
-
 	upgradeInfoArray, rc := getLaunchedSolutionsList(&containers, context)
 	if nil != rc {
 		log.Error(rc)
 		return rc
 	}
-
 	rc = doUpgradeSolutions(&upgradeInfoArray, &containers)
-
 	log.Infoln("[-]runOnce()")
-
 	return rc
 }
 
 func schedulePeriodicUpgrades(context *cli.Context) error {
 	log.Infoln("[+]schedulePeriodicUpgrades()")
-
 	gocron.Every(uint64(context.GlobalInt64(UpgradeIntervalName))).Seconds().Do(runOnce, context)
-
 	<-gocron.Start()
-
 	log.Infoln("[-]schedulePeriodicUpgrades()")
-
 	return nil
 }
 
@@ -86,19 +74,18 @@ func getSolutionAndServiceName(containerName string) (string, string, error) {
 		err error
 		rc  string
 	)
+	nameParts := strings.Split(containerName, "_")
+	length := len(nameParts)
 
-	slice := strings.Split(containerName, "_")
-	length := len(slice)
-
-	if 0 == length || 2 > length {
+	if length == 0 || length < 2 {
 		err = SolutionNameNotFound{
 			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
-			fmt.Sprintf("getSolutionName(): can't identify solution name [%s]", containerName),
+			fmt.Sprintf("getSolutionAndServiceName(): can't identify solution name [%s]", containerName),
 		}
 		return rc, rc, err
 	}
 
-	return slice[0][1:], slice[1], err
+	return nameParts[0][1:], nameParts[1], err
 }
 
 func getLaunchedSolutionsList(containers *[]Container, context *cli.Context) ([]UpstreamResponseUpgradeInfo, error) {
@@ -220,34 +207,41 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 	return rc
 }
 
+// isNewVersion check if there are new version available.
 func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Container) bool {
 	var rc bool
 
 	rc = false
 	containersSpec := make(map[string]ContainerSpec)
-	specMap := make(map[interface{}]interface{})
+	specMap := make(map[string]interface{})
 	err := yaml.Unmarshal([]byte(upgradeInfo.Spec), specMap)
 	if nil != err {
 		log.Error(err)
 		return false
 	}
-	if val, isExist := specMap[DockerComposeServicesName]; isExist {
+	if val, exists := specMap[DockerComposeServicesName]; exists {
 		servicesMap := val.(map[interface{}]interface{})
 		for service := range servicesMap {
 			var (
 				serviceImageName string
-				isFound          bool
+				found            bool
+				ok               bool
 			)
-			detailes := servicesMap[service].(map[interface{}]interface{})
-			isFound = false
-			for item := range detailes {
+			details := servicesMap[service].(map[interface{}]interface{})
+			found = false
+			for item := range details {
 				if DockerComposeImageName == item {
-					serviceImageName = detailes[item].(string)
-					isFound = true
-					break
+					val, itemFound := details[item]
+					if itemFound {
+						serviceImageName, ok = val.(string)
+						if ok {
+							found = true
+							break
+						}
+					}
 				}
 			}
-			if isFound {
+			if found {
 
 				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
 			}
@@ -255,7 +249,7 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 		for _, container := range *containers {
 			solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
 			val, exist := containersSpec[serviceName]
-			if (upgradeInfo.Name == solutionName) && (exist) {
+			if (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {
 					rc = true
 					break

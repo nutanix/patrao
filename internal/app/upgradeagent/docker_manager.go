@@ -39,7 +39,6 @@ func NewClient(pullImages bool) DockerClient {
 	if err != nil {
 		log.Fatalf("Error instantiating Docker client: %s", err)
 	}
-
 	return dockerClient{api: client, pullImages: pullImages}
 }
 
@@ -54,7 +53,6 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	for _, runningContainer := range runningContainers {
 		containerInfo, err := client.api.ContainerInspect(bg, runningContainer.ID)
 		if err != nil {
@@ -71,7 +69,6 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 			cs = append(cs, c)
 		}
 	}
-
 	return cs, nil
 }
 
@@ -81,31 +78,26 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 	if signal == "" {
 		signal = DefaultStopSignal
 	}
-
 	log.Infof("Stopping %s (%s) with %s", c.Name(), c.ID(), signal)
-
 	if err := client.api.ContainerKill(bg, c.ID(), signal); err != nil {
 		return err
 	}
-
 	// Wait for container to exit, but proceed anyway after the timeout elapses
 	client.waitForStop(c, timeout)
-
 	if c.containerInfo.HostConfig.AutoRemove {
 		log.Debugf("AutoRemove container %s, skipping ContainerRemove call.", c.ID())
 	} else {
 		log.Debugf("Removing container %s", c.ID())
 
-		if err := client.api.ContainerRemove(bg, c.ID(), types.ContainerRemoveOptions{Force: true, RemoveVolumes: false}); err != nil {
+		if err := client.api.ContainerRemove(bg, c.ID(),
+			types.ContainerRemoveOptions{Force: true, RemoveVolumes: false}); err != nil {
 			return err
 		}
 	}
-
 	// Wait for container to be removed. In this case an error is a good thing
 	if err := client.waitForStop(c, timeout); err == nil {
 		return fmt.Errorf("Container %s (%s) could not be removed", c.Name(), c.ID())
 	}
-
 	return nil
 }
 
@@ -127,40 +119,31 @@ func (client dockerClient) StartContainer(c Container) error {
 	}()
 
 	name := c.Name()
-
 	log.Infof("Creating %s", name)
 	creation, err := client.api.ContainerCreate(bg, config, hostConfig, simpleNetworkConfig, name)
 	if err != nil {
 		return err
 	}
-
 	if !(hostConfig.NetworkMode.IsHost()) {
-
 		for k := range simpleNetworkConfig.EndpointsConfig {
 			err = client.api.NetworkDisconnect(bg, k, creation.ID, true)
 			if err != nil {
 				return err
 			}
 		}
-
 		for k, v := range networkConfig.EndpointsConfig {
 			err = client.api.NetworkConnect(bg, k, creation.ID, v)
 			if err != nil {
 				return err
 			}
 		}
-
 	}
-
 	log.Debugf("Starting container %s (%s)", name, creation.ID)
-
 	err = client.api.ContainerStart(bg, creation.ID, types.ContainerStartOptions{})
 	if err != nil {
 		return err
 	}
-
 	return nil
-
 }
 
 func (client dockerClient) RenameContainer(c Container, newName string) error {
@@ -176,14 +159,12 @@ func (client dockerClient) IsContainerStale(c Container) (bool, error) {
 
 	if client.pullImages {
 		log.Debugf("Pulling %s for %s", imageName, c.Name())
-
 		var opts types.ImagePullOptions // ImagePullOptions can take a RegistryAuth arg to authenticate against a private registry
 		//auth, err := EncodedAuth(imageName)
 		//
 		var err error
 		auth := ""
 		//
-
 		log.Debugf("Got auth value: %s", auth)
 		log.Debugf("Got image name: %s", imageName)
 		if err != nil {
@@ -195,28 +176,23 @@ func (client dockerClient) IsContainerStale(c Container) (bool, error) {
 		} else {
 			//opts = types.ImagePullOptions{RegistryAuth: auth, PrivilegeFunc: DefaultAuthHandler}
 		}
-
 		response, err := client.api.ImagePull(bg, imageName, opts)
 		if err != nil {
 			log.Debugf("Error pulling image %s, %s", imageName, err)
 			return false, err
 		}
 		defer response.Close()
-
 		// the pull request will be aborted prematurely unless the response is read
 		_, err = ioutil.ReadAll(response)
 	}
-
 	newImageInfo, _, err := client.api.ImageInspectWithRaw(bg, imageName)
 	if err != nil {
 		return false, err
 	}
-
 	if newImageInfo.ID != oldImageInfo.ID {
 		log.Infof("Found new %s image (%s)", imageName, newImageInfo.ID)
 		return true, nil
 	}
-
 	log.Debugf("No new images found for %s", c.Name())
 	return false, nil
 }
@@ -231,7 +207,6 @@ func (client dockerClient) RemoveImage(c Container) error {
 func (client dockerClient) waitForStop(c Container, waitTime time.Duration) error {
 	bg := context.Background()
 	timeout := time.After(waitTime)
-
 	for {
 		select {
 		case <-timeout:
@@ -243,7 +218,6 @@ func (client dockerClient) waitForStop(c Container, waitTime time.Duration) erro
 				return nil
 			}
 		}
-
 		time.Sleep(1 * time.Second)
 	}
 }
