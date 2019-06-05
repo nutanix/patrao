@@ -7,10 +7,6 @@ import (
 	"github.com/docker/docker/api/types"
 )
 
-const (
-	signalLabel = "com.centurylinklabs.watchtower.stop-signal"
-)
-
 // NewContainer returns a new Container instance instantiated with the
 // specified ContainerInfo and ImageInfo structs.
 func NewContainer(containerInfo *types.ContainerJSON, imageInfo *types.ImageInspect) *Container {
@@ -49,15 +45,4 @@ func (c Container) ImageName() string {
 	}
 
 	return imageName
-}
-
-// StopSignal returns the custom stop signal (if any) that is encoded in the
-// container's metadata. If the container has not specified a custom stop
-// signal, the empty string "" is returned.
-func (c Container) StopSignal() string {
-	if val, ok := c.containerInfo.Config.Labels[signalLabel]; ok {
-		return val
-	}
-
-	return ""
 }

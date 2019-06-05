@@ -67,10 +67,7 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 
 func (client dockerClient) StopContainer(c Container, timeout time.Duration) error {
 	bg := context.Background()
-	signal := c.StopSignal()
-	if signal == "" {
-		signal = DefaultStopSignal
-	}
+	signal := DefaultStopSignal
 	log.Infof("Stopping %s (%s) with %s", c.Name(), c.ID(), signal)
 	if err := client.api.ContainerKill(bg, c.ID(), signal); err != nil {
 		return err
