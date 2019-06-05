@@ -1,4 +1,4 @@
-package core
+package upgradeagent
 
 // ApplicationName is literal name of applicaton
 const ApplicationName = "Patrao Upgrade Agent"
@@ -68,3 +68,6 @@ const DockerComposeImageName = "image"
 
 // DockerComposeServicesName services section name. related to docker-compose.yml
 const DockerComposeServicesName = "services"
+
+// StopContainerDefaultTimeoutS is default timeout for StopContainer feature
+const StopContainerDefaultTimeoutS = 10

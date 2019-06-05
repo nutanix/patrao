@@ -41,21 +41,17 @@ func setupAppFlags() []cli.Flag {
 }
 
 func createApp() *cli.App {
-	return cli.NewApp()
+	app := cli.NewApp()
+	app.Name = core.ApplicationName
+	app.Usage = core.ApplicationUsage
+	app.Action = start
+	app.Flags = setupAppFlags()
+	return app
 }
 
 func main() {
 	log.SetLevel(log.InfoLevel)
-
-	app := createApp()
-
-	app.Name = core.ApplicationName
-	app.Usage = core.ApplicationUsage
-	app.Action = start
-
-	app.Flags = setupAppFlags()
-
-	if err := app.Run(os.Args); err != nil {
+	if err := createApp().Run(os.Args); err != nil {
 		log.Fatal(err)
 	}
 }

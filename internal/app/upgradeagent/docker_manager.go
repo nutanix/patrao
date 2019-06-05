@@ -1,12 +1,12 @@
-package core
+package upgradeagent
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
+	"os/exec"
 	"time"
 
 	"github.com/docker/docker/api/types"
-	"github.com/docker/docker/api/types/network"
 	dockerclient "github.com/docker/docker/client"
 	log "github.com/sirupsen/logrus"
 	"golang.org/x/net/context"
@@ -16,10 +16,7 @@ import (
 type DockerClient interface {
 	ListContainers() ([]Container, error)
 	StopContainer(Container, time.Duration) error
-	StartContainer(Container) error
-	RenameContainer(Container, string) error
-	IsContainerStale(Container) (bool, error)
-	RemoveImage(Container) error
+	LaunchSolution(*UpstreamResponseUpgradeInfo) error
 }
 
 type dockerClient struct {
@@ -35,7 +32,6 @@ type dockerClient struct {
 //  * DOCKER_API_VERSION	the minimum docker api version to work with
 func NewClient(pullImages bool) DockerClient {
 	client, err := dockerclient.NewEnvClient()
-
 	if err != nil {
 		log.Fatalf("Error instantiating Docker client: %s", err)
 	}
@@ -45,7 +41,6 @@ func NewClient(pullImages bool) DockerClient {
 func (client dockerClient) ListContainers() ([]Container, error) {
 	cs := []Container{}
 	bg := context.Background()
-	log.Debug("Retrieving running containers")
 	runningContainers, err := client.api.ContainerList(
 		bg,
 		types.ContainerListOptions{})
@@ -58,12 +53,10 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 		if err != nil {
 			return nil, err
 		}
-
 		imageInfo, _, err := client.api.ImageInspectWithRaw(bg, containerInfo.Image)
 		if err != nil {
 			return nil, err
 		}
-
 		c := Container{containerInfo: &containerInfo, imageInfo: &imageInfo}
 		if PatraoAgentContainerName != c.Name() {
 			cs = append(cs, c)
@@ -101,109 +94,6 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 	return nil
 }
 
-func (client dockerClient) StartContainer(c Container) error {
-	bg := context.Background()
-	config := c.runtimeConfig()
-	hostConfig := c.hostConfig()
-	networkConfig := &network.NetworkingConfig{EndpointsConfig: c.containerInfo.NetworkSettings.Networks}
-	// simpleNetworkConfig is a networkConfig with only 1 network.
-	// see: https://github.com/docker/docker/issues/29265
-	simpleNetworkConfig := func() *network.NetworkingConfig {
-		oneEndpoint := make(map[string]*network.EndpointSettings)
-		for k, v := range networkConfig.EndpointsConfig {
-			oneEndpoint[k] = v
-			// we only need 1
-			break
-		}
-		return &network.NetworkingConfig{EndpointsConfig: oneEndpoint}
-	}()
-
-	name := c.Name()
-	log.Infof("Creating %s", name)
-	creation, err := client.api.ContainerCreate(bg, config, hostConfig, simpleNetworkConfig, name)
-	if err != nil {
-		return err
-	}
-	if !(hostConfig.NetworkMode.IsHost()) {
-		for k := range simpleNetworkConfig.EndpointsConfig {
-			err = client.api.NetworkDisconnect(bg, k, creation.ID, true)
-			if err != nil {
-				return err
-			}
-		}
-		for k, v := range networkConfig.EndpointsConfig {
-			err = client.api.NetworkConnect(bg, k, creation.ID, v)
-			if err != nil {
-				return err
-			}
-		}
-	}
-	log.Debugf("Starting container %s (%s)", name, creation.ID)
-	err = client.api.ContainerStart(bg, creation.ID, types.ContainerStartOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
-func (client dockerClient) RenameContainer(c Container, newName string) error {
-	bg := context.Background()
-	log.Debugf("Renaming container %s (%s) to %s", c.Name(), c.ID(), newName)
-	return client.api.ContainerRename(bg, c.ID(), newName)
-}
-
-func (client dockerClient) IsContainerStale(c Container) (bool, error) {
-	bg := context.Background()
-	oldImageInfo := c.imageInfo
-	imageName := c.ImageName()
-
-	if client.pullImages {
-		log.Debugf("Pulling %s for %s", imageName, c.Name())
-		var opts types.ImagePullOptions // ImagePullOptions can take a RegistryAuth arg to authenticate against a private registry
-		//auth, err := EncodedAuth(imageName)
-		//
-		var err error
-		auth := ""
-		//
-		log.Debugf("Got auth value: %s", auth)
-		log.Debugf("Got image name: %s", imageName)
-		if err != nil {
-			log.Debugf("Error loading authentication credentials %s", err)
-			return false, err
-		} else if auth == "" {
-			log.Debugf("No authentication credentials found for %s", imageName)
-			opts = types.ImagePullOptions{} // empty/no auth credentials
-		} else {
-			//opts = types.ImagePullOptions{RegistryAuth: auth, PrivilegeFunc: DefaultAuthHandler}
-		}
-		response, err := client.api.ImagePull(bg, imageName, opts)
-		if err != nil {
-			log.Debugf("Error pulling image %s, %s", imageName, err)
-			return false, err
-		}
-		defer response.Close()
-		// the pull request will be aborted prematurely unless the response is read
-		_, err = ioutil.ReadAll(response)
-	}
-	newImageInfo, _, err := client.api.ImageInspectWithRaw(bg, imageName)
-	if err != nil {
-		return false, err
-	}
-	if newImageInfo.ID != oldImageInfo.ID {
-		log.Infof("Found new %s image (%s)", imageName, newImageInfo.ID)
-		return true, nil
-	}
-	log.Debugf("No new images found for %s", c.Name())
-	return false, nil
-}
-
-func (client dockerClient) RemoveImage(c Container) error {
-	imageID := c.ImageID()
-	log.Infof("Removing image %s", imageID)
-	_, err := client.api.ImageRemove(context.Background(), imageID, types.ImageRemoveOptions{Force: true})
-	return err
-}
-
 func (client dockerClient) waitForStop(c Container, waitTime time.Duration) error {
 	bg := context.Background()
 	timeout := time.After(waitTime)
@@ -220,4 +110,42 @@ func (client dockerClient) waitForStop(c Container, waitTime time.Duration) erro
 		}
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) error {
+	if _, isFileExist := os.Stat(info.Name); !os.IsNotExist(isFileExist) {
+		os.RemoveAll(info.Name)
+	}
+	err := os.Mkdir(info.Name, os.ModePerm)
+	if nil != err {
+		log.Error(err)
+		return err
+	}
+	defer os.Remove(info.Name)
+	dockerComposeFileName := fmt.Sprintf("%s/%s", info.Name, DockerComposeFileName)
+	f, err := os.Create(dockerComposeFileName)
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	defer func() {
+		f.Close()
+		os.Remove(dockerComposeFileName)
+	}()
+
+	_, err = f.Write([]byte(info.Spec)[:len(info.Spec)])
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+	log.Infof("Launching solution [%s]", info.Name)
+	cmd := exec.Command(DockerComposeCommand, "-f", fmt.Sprintf("%s/%s", rootPath, dockerComposeFileName), "up", "-d")
+	err = cmd.Run()
+	if err != nil {
+		log.Error(err)
+		return err
+	}
+
+	return nil
 }
