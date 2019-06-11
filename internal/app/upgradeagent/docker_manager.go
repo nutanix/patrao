@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -91,6 +93,7 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 	return nil
 }
 
+// waitForStop waits until container being stopped
 func (client dockerClient) waitForStop(c Container, waitTime time.Duration) error {
 	bg := context.Background()
 	timeout := time.After(waitTime)
@@ -109,6 +112,7 @@ func (client dockerClient) waitForStop(c Container, waitTime time.Duration) erro
 	}
 }
 
+// LaunchSolution launch solution based on the received docker-compose specification
 func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) error {
 	if _, isFileExist := os.Stat(info.Name); !os.IsNotExist(isFileExist) {
 		os.RemoveAll(info.Name)
@@ -119,7 +123,7 @@ func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) err
 		return err
 	}
 	defer os.Remove(info.Name)
-	dockerComposeFileName := fmt.Sprintf("%s/%s", info.Name, DockerComposeFileName)
+	dockerComposeFileName := path.Join(info.Name, DockerComposeFileName)
 	f, err := os.Create(dockerComposeFileName)
 	if err != nil {
 		log.Error(err)
@@ -131,13 +135,15 @@ func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) err
 		os.Remove(dockerComposeFileName)
 	}()
 
-	_, err = f.Write([]byte(info.Spec)[:len(info.Spec)])
+	_, err = f.Write([]byte(info.Spec))
 	if err != nil {
 		log.Error(err)
 		return err
 	}
 	log.Infof("Launching solution [%s]", info.Name)
-	cmd := exec.Command(DockerComposeCommand, "-f", fmt.Sprintf("%s/%s", rootPath, dockerComposeFileName), "up", "-d")
+	ex, _ := os.Executable()
+	rootPath := filepath.Dir(ex)
+	cmd := exec.Command(DockerComposeCommand, "-f", path.Join(rootPath, dockerComposeFileName), "up", "-d")
 	err = cmd.Run()
 	if err != nil {
 		log.Error(err)

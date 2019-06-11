@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"os"
-	"path/filepath"
 	"time"
 
 	"strings"
@@ -18,14 +16,11 @@ import (
 )
 
 var (
-	client   DockerClient
-	rootPath string
+	client DockerClient
 )
 
 // Main - Upgrade Agent entry point
 func Main(context *cli.Context) error {
-	ex, _ := os.Executable()
-	rootPath = filepath.Dir(ex)
 	client = NewClient(false)
 
 	if context.GlobalBool(RunOnceName) {
