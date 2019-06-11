@@ -1,5 +1,5 @@
 GIT_REPO=github.com/nutanix/patrao
-BIN_NAME=upgrade_agent
+BIN_NAME=upgradeagent
 IMG_NAME=patrao-upgrade-agent
 IMG_VERSION=latest
 rdir := $(dir $(lastword $(MAKEFILE_LIST)))

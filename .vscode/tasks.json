@@ -6,7 +6,7 @@
 	"tasks": [
 		{
 			"label": "1. upgrade_agent_build_deploy",
-			"command": "cd ${workspaceFolder}/cmd/upgrade_agent/ && rm -rf ./upgrade_agent && rm -rf ${workspaceFolder}/deployments/upgrade_agent/upgrade_agent && GOOS=linux GOARCH=amd64 go build && cp ./upgrade_agent ${workspaceFolder}/deployments/upgrade_agent/",
+			"command": "cd ${workspaceFolder}/cmd/upgradeagent/ && rm -rf ./upgradeagent && rm -rf ${workspaceFolder}/deployments/upgradeagent/upgradeagent && GOOS=linux GOARCH=amd64 go build && cp ./upgradeagent ${workspaceFolder}/deployments/upgradeagent/",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -17,7 +17,7 @@
 		},
 		{
 			"label": "2. upgrade_agent_create_image",
-			"command": "cd ${workspaceFolder}/deployments/upgrade_agent/ && docker image remove -f patrao_upgrade_agent && docker build --tag=patrao_upgrade_agent .",
+			"command": "cd ${workspaceFolder}/deployments/upgradeagent/ && docker image remove -f patrao_upgrade_agent && docker build --tag=patrao_upgrade_agent .",
 			"group": {
 				"kind": "build",
 				"isDefault": true
@@ -26,7 +26,7 @@
 		},
 		{
 			"label": "3. upgrade_agent_run_image",
-			"command": "docker run patrao_upgrade_agent",
+			"command": "docker container prune -f && docker run --expose 1080/tcp -v /var/run/docker.sock:/var/run/docker.sock:ro --name patrao_agent patrao_upgrade_agent",
 			"group": {
 				"kind": "build",
 				"isDefault": true
