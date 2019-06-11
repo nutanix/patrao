@@ -1,0 +1,17 @@
+version: 2
+
+jobs:
+  build-from-source:
+    working_directory: /go/github.com/nutanix/patrao
+    docker:
+    - image: circleci/golang:1.12
+    steps:
+    - checkout
+    - setup_remote_docker
+    - run: make image
+
+workflows:
+  version: 2
+  build-oscar:
+    jobs:
+      - build-from-source  
