@@ -135,7 +135,11 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 }
 
 func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containers *[]Container) error {
-	var rc error
+	var (
+		rc      error
+		toCheck []UpstreamResponseUpgradeInfo
+	)
+
 	for _, item := range *upgradeInfoList {
 		if !isNewVersion(&item, containers) {
 			log.Infof("Solution [%s] is up-to-date.", item.Name)
@@ -156,6 +160,10 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 			continue
 		}
 		log.Infof("Solution [%s] is successful launched", item.Name)
+		toCheck = append(toCheck, item)
+	}
+	if len(toCheck) > 0 {
+		doHealthChek(&toCheck, containers)
 	}
 	return rc
 }
@@ -211,4 +219,9 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 		}
 	}
 	return rc
+}
+
+// doHealthCheck do solutions healthcheck afeter upgrade is completed
+func doHealthChek(toCheck *[]UpstreamResponseUpgradeInfo, containers *[]Container) {
+	// TBD
 }

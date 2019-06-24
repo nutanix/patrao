@@ -64,9 +64,13 @@ type ContainerSpec struct {
 
 // UpstreamResponseUpgradeInfo structure represent response from Upstream Service
 type UpstreamResponseUpgradeInfo struct {
-	Name          string
-	Spec          string
-	DeleteVolumes string
+	Name            string
+	Spec            string
+	DeleteVolumes   string
+	HealthCheckCmds []struct {
+		ContainerName string
+		Cmd           string
+	}
 }
 
 // SolutionNameNotFound struct present error when agent couldn't find solution name by container name
