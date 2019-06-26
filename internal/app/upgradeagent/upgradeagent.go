@@ -9,6 +9,7 @@ import (
 
 	"strings"
 
+	"github.com/docker/docker/api/types"
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -148,7 +149,7 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 		for _, container := range *containers {
 			name, _, _ := getSolutionAndServiceName(container.Name())
 			if item.Name == name {
-				err := client.StopContainer(container, StopContainerDefaultTimeoutS)
+				err := client.StopContainer(container, DefaultTimeoutS*time.Second)
 				if nil != err {
 					log.Error(err)
 				}
@@ -223,5 +224,58 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 
 // doHealthCheck do solutions healthcheck afeter upgrade is completed
 func doHealthChek(toCheck *[]UpstreamResponseUpgradeInfo, containers *[]Container) {
-	// TBD
+	for _, item := range *toCheck {
+		if len(item.HealthCheckCmds) > 0 {
+			timeout := time.After(time.Duration(item.ThresholdTimeS) * time.Second)
+			loopExit := false
+			for {
+				if loopExit {
+					break
+				}
+				time.Sleep(1 * time.Second)
+				select {
+				case <-timeout:
+					{
+						log.Info("timeout")
+						break
+					}
+				default:
+					{
+						containerList, _ := client.ListContainers()
+						for _, HealthCheckCmd := range item.HealthCheckCmds {
+							for _, container := range containerList {
+								solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
+								if item.Name == solutionName && HealthCheckCmd.ContainerName == serviceName {
+									config, err := client.InspectContainer(&container)
+									if err != nil {
+										log.Error(err)
+										break
+									}
+									if !config.State.Running {
+										log.Infof("Container %s is NOT Running state", serviceName)
+										break
+									}
+									log.Infof("Container %s is in Running state. Try to check Healthy status", serviceName)
+									if config.State.Health != nil && config.State.Health.Status != types.Healthy {
+										log.Infof("Container %s have healthy information. The current status is [%s]", serviceName, config.State.Health.Status)
+										continue
+									}
+									exitCode, err := client.ExecContainer(&container, HealthCheckCmd.Cmd)
+									if err != nil {
+										log.Error(err)
+										continue
+									}
+									if exitCode == 0 {
+										log.Infof("Container %s has passed healthy check!", serviceName)
+										loopExit = true
+										break
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+	}
 }

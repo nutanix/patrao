@@ -67,6 +67,7 @@ type UpstreamResponseUpgradeInfo struct {
 	Name            string
 	Spec            string
 	DeleteVolumes   string
+	ThresholdTimeS  int
 	HealthCheckCmds []struct {
 		ContainerName string
 		Cmd           string

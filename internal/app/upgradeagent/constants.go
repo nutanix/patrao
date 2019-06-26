@@ -69,5 +69,8 @@ const DockerComposeImageName = "image"
 // DockerComposeServicesName services section name. related to docker-compose.yml
 const DockerComposeServicesName = "services"
 
-// StopContainerDefaultTimeoutS is default timeout for StopContainer feature
-const StopContainerDefaultTimeoutS = 10
+// DefaultTimeoutS is default timeout for StopContainer feature
+const DefaultTimeoutS = 10
+
+// DefaultExitCode is defaule value for waitForContainerExec function
+const DefaultExitCode = -1
