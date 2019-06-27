@@ -2,12 +2,9 @@ package upgradeagent
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
-
-	"strings"
 
 	"github.com/docker/docker/api/types"
 	"github.com/jasonlvhit/gocron"
@@ -61,34 +58,6 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 	return nil
 }
 
-func contains(names *[]string, item *string) bool {
-	for _, it := range *names {
-		if it == *item {
-			return true
-		}
-	}
-	return false
-}
-
-func getSolutionAndServiceName(containerName string) (string, string, error) {
-	var (
-		err error
-		rc  string
-	)
-	nameParts := strings.Split(containerName, "_")
-	length := len(nameParts)
-
-	if length == 0 || length < 2 {
-		err = SolutionNameNotFound{
-			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
-			fmt.Sprintf("getSolutionAndServiceName(): can't identify solution name [%s]", containerName),
-		}
-		return rc, rc, err
-	}
-
-	return nameParts[0][1:], nameParts[1], err
-}
-
 func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]UpstreamResponseUpgradeInfo, error) {
 	var (
 		solutions []string
@@ -98,12 +67,12 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
 
 	for _, current := range *containers {
-		currentSolution, _, err := getSolutionAndServiceName(current.Name())
+		currentSolution, _, err := GetSolutionAndServiceName(current.Name())
 		if nil != err {
 			log.Error(err)
 			continue
 		}
-		if contains(&solutions, &currentSolution) {
+		if Contains(&solutions, &currentSolution) {
 			continue
 		}
 		solutions = append(solutions, currentSolution)
@@ -122,7 +91,7 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 			continue
 		}
 
-		var toUpgrade UpstreamResponseUpgradeInfo
+		toUpgrade := NewUpstreamResponseUpgradeInfo()
 		err = json.Unmarshal([]byte(body), &toUpgrade)
 
 		if nil != err {
@@ -130,7 +99,7 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 			continue
 		}
 
-		rc = append(rc, toUpgrade)
+		rc = append(rc, *toUpgrade)
 	}
 	return rc, err
 }
@@ -147,7 +116,7 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 			continue
 		}
 		for _, container := range *containers {
-			name, _, _ := getSolutionAndServiceName(container.Name())
+			name, _, _ := GetSolutionAndServiceName(container.Name())
 			if item.Name == name {
 				err := client.StopContainer(container, DefaultTimeoutS*time.Second)
 				if nil != err {
@@ -163,9 +132,8 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 		log.Infof("Solution [%s] is successful launched", item.Name)
 		toCheck = append(toCheck, item)
 	}
-	if len(toCheck) > 0 {
-		doHealthChek(&toCheck, containers)
-	}
+	doHealthChek(&toCheck)
+
 	return rc
 }
 
@@ -209,7 +177,7 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 			}
 		}
 		for _, container := range *containers {
-			solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
+			solutionName, serviceName, _ := GetSolutionAndServiceName(container.Name())
 			val, exist := containersSpec[serviceName]
 			if (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {
@@ -222,60 +190,67 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 	return rc
 }
 
-// doHealthCheck do solutions healthcheck afeter upgrade is completed
-func doHealthChek(toCheck *[]UpstreamResponseUpgradeInfo, containers *[]Container) {
-	for _, item := range *toCheck {
-		if len(item.HealthCheckCmds) > 0 {
-			timeout := time.After(time.Duration(item.ThresholdTimeS) * time.Second)
-			loopExit := false
-			for {
-				if loopExit {
-					break
-				}
-				time.Sleep(1 * time.Second)
-				select {
-				case <-timeout:
-					{
-						log.Info("timeout")
+func doContainersCheck(solutionInfo *UpstreamResponseUpgradeInfo) {
+	timeout := time.After(time.Duration(solutionInfo.ThresholdTimeS) * time.Second)
+
+	for solutionInfo.HealthCheckStatus == Undefined {
+		select {
+		case <-timeout:
+			solutionInfo.HealthCheckStatus = Unhealthy
+			log.Infof("Solution [%s] is Unhealthy", solutionInfo.Name)
+			return
+		default:
+			{
+				checkContainersCompletedCount := 0
+
+				for _, healthChekCmd := range solutionInfo.HealthCheckCmds {
+					container, err := client.GetContainerByName(solutionInfo.Name, healthChekCmd.ContainerName)
+					if err != nil {
+						log.Error(err)
 						break
 					}
-				default:
-					{
-						containerList, _ := client.ListContainers()
-						for _, HealthCheckCmd := range item.HealthCheckCmds {
-							for _, container := range containerList {
-								solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
-								if item.Name == solutionName && HealthCheckCmd.ContainerName == serviceName {
-									config, err := client.InspectContainer(&container)
-									if err != nil {
-										log.Error(err)
-										break
-									}
-									if !config.State.Running {
-										log.Infof("Container %s is NOT Running state", serviceName)
-										break
-									}
-									log.Infof("Container %s is in Running state. Try to check Healthy status", serviceName)
-									if config.State.Health != nil && config.State.Health.Status != types.Healthy {
-										log.Infof("Container %s have healthy information. The current status is [%s]", serviceName, config.State.Health.Status)
-										continue
-									}
-									exitCode, err := client.ExecContainer(&container, HealthCheckCmd.Cmd)
-									if err != nil {
-										log.Error(err)
-										continue
-									}
-									if exitCode == 0 {
-										log.Infof("Container %s has passed healthy check!", serviceName)
-										loopExit = true
-										break
-									}
-								}
-							}
+					config, err := client.InspectContainer(container)
+					if err != nil {
+						log.Error(err)
+						break
+					}
+					if !config.State.Running {
+						log.Infof("Container %s is NOT Running state.", healthChekCmd.ContainerName)
+						continue
+					}
+					if config.State.Health != nil {
+						log.Infof("Container %s has embedded healthchek.", healthChekCmd.ContainerName)
+						if config.State.Health.Status != types.Healthy {
+							log.Infof("Container %s have healthy information. The current status is [%s]", healthChekCmd.ContainerName, config.State.Health.Status)
+							continue
 						}
+					} else {
+						log.Infof("Container %s has NOT embedded healthchek. Skip this step.", healthChekCmd.ContainerName)
+					}
+					exitCode, err := client.ExecContainer(container, healthChekCmd.Cmd)
+					if err != nil {
+						log.Error(err)
+						break
+					}
+					if exitCode == 0 {
+						log.Infof("Container %s has passed healthcheck command [%s], exit code is [%d]", healthChekCmd.ContainerName, healthChekCmd.Cmd, exitCode)
+						checkContainersCompletedCount++
 					}
 				}
+				if checkContainersCompletedCount == len(solutionInfo.HealthCheckCmds) {
+					log.Infof("Solution [%s] is healthy", solutionInfo.Name)
+					solutionInfo.HealthCheckStatus = Healthy
+					return
+				}
+				time.Sleep(1 * time.Second)
 			}
 		}
+	}
+}
+
+// doHealthCheck do solutions healthcheck afeter upgrade is completed
+func doHealthChek(toCheck *[]UpstreamResponseUpgradeInfo) {
+	for _, item := range *toCheck {
+		doContainersCheck(&item)
 	}
 }

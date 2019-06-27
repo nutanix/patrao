@@ -26,6 +26,16 @@ const (
 	DockerCompose KindSubType = "docker-compose"
 )
 
+// HealthStatus indicates HealthCheck result
+type HealthStatus string
+
+// possible values of HealthStatus
+const (
+	Undefined = "undefined"
+	Healthy   = "healthy"
+	Unhealthy = "unhealthy"
+)
+
 // Node Identifies an individual VM uniquely, based on its node uuid.
 type Node struct {
 	Kind      KindType
@@ -64,11 +74,12 @@ type ContainerSpec struct {
 
 // UpstreamResponseUpgradeInfo structure represent response from Upstream Service
 type UpstreamResponseUpgradeInfo struct {
-	Name            string
-	Spec            string
-	DeleteVolumes   string
-	ThresholdTimeS  int
-	HealthCheckCmds []struct {
+	Name              string
+	Spec              string
+	DeleteVolumes     string
+	ThresholdTimeS    int
+	HealthCheckStatus HealthStatus
+	HealthCheckCmds   []struct {
 		ContainerName string
 		Cmd           string
 	}
@@ -120,4 +131,11 @@ func genUUID() string {
 func genNodeUUID() string {
 	// TBD
 	return "node-uuid"
+}
+
+// NewUpstreamResponseUpgradeInfo returns new instance of UpstreamResponseUpgradeInfo data structure
+func NewUpstreamResponseUpgradeInfo() *UpstreamResponseUpgradeInfo {
+	return &UpstreamResponseUpgradeInfo{
+		HealthCheckStatus: Undefined,
+	}
 }

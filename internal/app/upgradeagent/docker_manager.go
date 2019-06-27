@@ -1,6 +1,7 @@
 package upgradeagent
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -22,6 +23,7 @@ type DockerClient interface {
 	LaunchSolution(*UpstreamResponseUpgradeInfo) error
 	InspectContainer(*Container) (types.ContainerJSON, error)
 	ExecContainer(*Container, string) (int, error)
+	GetContainerByName(string, string) (*Container, error)
 }
 
 type dockerClient struct {
@@ -199,4 +201,24 @@ func (client dockerClient) ExecContainer(c *Container, cmd string) (int, error) 
 		return DefaultExitCode, err
 	}
 	return client.waitForContainerExec(execID.ID, DefaultTimeoutS*time.Second)
+}
+
+// GetContainerByName returns Container struct by solution name and container name
+func (client dockerClient) GetContainerByName(solutionName string, containerName string) (*Container, error) {
+	containers, err := client.ListContainers()
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	for _, item := range containers {
+		currSolutionName, currServiceName, err := GetSolutionAndServiceName(item.Name())
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		if currSolutionName == solutionName && currServiceName == containerName {
+			return &item, nil
+		}
+	}
+	return nil, errors.New("Container not found")
 }
