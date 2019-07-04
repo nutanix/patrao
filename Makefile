@@ -17,6 +17,7 @@ image: binaries
 $(rdir)/bin/$(BIN_NAME):
 	mkdir -p $(rdir)/bin
 	CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -o $@ $(GIT_REPO)/cmd/$(BIN_NAME)
+	go test $(GIT_REPO)/internal/app/upgradeagent/
 
 clean:
 	-docker rmi $(IMG_NAME):$(IMG_VERSION)
