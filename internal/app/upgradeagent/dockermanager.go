@@ -1,7 +1,6 @@
 package upgradeagent
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
@@ -62,10 +61,6 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 			return nil, err
 		}
 		imageInfo, _, err := client.api.ImageInspectWithRaw(bg, containerInfo.Image)
-
-		test, _ := json.Marshal(imageInfo)
-		log.Info(string(test))
-
 		if err != nil {
 			return nil, err
 		}
