@@ -15,7 +15,7 @@ const containerID = "18031f7e098a81df3eee505981ba395662d5142272cf0b3e2c22e70f32a
 const containerName = "/test_cache_1"
 const imageName = "postgres:9.5"
 
-func createTestData(t *testing.T) (types.ContainerJSON, types.ImageInspect) {
+func CreateTestData(t *testing.T) (types.ContainerJSON, types.ImageInspect) {
 	var (
 		container types.ContainerJSON
 		image     types.ImageInspect
@@ -28,31 +28,31 @@ func createTestData(t *testing.T) (types.ContainerJSON, types.ImageInspect) {
 	return container, image
 }
 
-func createTestContainer(t *testing.T) *core.Container {
-	container, image := createTestData(t)
+func CreateTestContainer(t *testing.T) *core.Container {
+	container, image := CreateTestData(t)
 	c := core.NewContainer(&container, &image)
 	assert.NotNil(t, c)
 	return c
 }
 
 func TestNewContainer(t *testing.T) {
-	container, image := createTestData(t)
+	container, image := CreateTestData(t)
 
 	assert.NotNil(t, core.NewContainer(nil, nil))
 	assert.NotNil(t, core.NewContainer(&container, &image))
 }
 
 func TestID(t *testing.T) {
-	c := createTestContainer(t)
+	c := CreateTestContainer(t)
 	assert.Equal(t, containerID, c.ID())
 }
 
 func TestName(t *testing.T) {
-	c := createTestContainer(t)
+	c := CreateTestContainer(t)
 	assert.Equal(t, containerName, c.Name())
 }
 
 func TestImageName(t *testing.T) {
-	c := createTestContainer(t)
+	c := CreateTestContainer(t)
 	assert.Equal(t, imageName, c.ImageName())
 }
