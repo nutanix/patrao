@@ -4,6 +4,9 @@ import (
 	"fmt"
 	"strings"
 	"time"
+
+	"github.com/gofrs/uuid"
+	log "github.com/sirupsen/logrus"
 )
 
 // Contains returns true in case if there is item in array. otherwise return false
@@ -34,4 +37,19 @@ func GetSolutionAndServiceName(containerName string) (string, string, error) {
 	}
 
 	return nameParts[0][1:], nameParts[1], err
+}
+
+// GenUUID generate UUID string
+func GenUUID() string {
+	u4, err := uuid.NewV4()
+	if err != nil {
+		log.Error(err)
+	}
+	return u4.String()
+}
+
+// GenNodeUUID generate node uuid
+func GenNodeUUID() string {
+	// TBD
+	return "node-uuid"
 }

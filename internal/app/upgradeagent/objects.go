@@ -3,9 +3,6 @@ package upgradeagent
 import (
 	"fmt"
 	"time"
-
-	uuid "github.com/nu7hatch/gouuid"
-	log "github.com/sirupsen/logrus"
 )
 
 // KindType Kind type for all structures
@@ -76,7 +73,7 @@ type ContainerSpec struct {
 type UpstreamResponseUpgradeInfo struct {
 	Name              string
 	Spec              string
-	DeleteVolumes     string
+	DeleteVolumes     bool
 	ThresholdTimeS    int
 	HealthCheckStatus HealthStatus
 	HealthCheckCmds   []struct {
@@ -99,8 +96,8 @@ func (e SolutionNameNotFound) Error() string {
 func NewNode() *Node {
 	return &Node{
 		Kind:     NodeKind,
-		UUID:     genUUID(),
-		NodeUUID: genNodeUUID(),
+		UUID:     GenUUID(),
+		NodeUUID: GenNodeUUID(),
 	}
 }
 
@@ -108,7 +105,7 @@ func NewNode() *Node {
 func NewAppTemplate() *AppTemplate {
 	return &AppTemplate{
 		Kind: AppTemplateKind,
-		UUID: genUUID(),
+		UUID: GenUUID(),
 	}
 }
 
@@ -116,21 +113,8 @@ func NewAppTemplate() *AppTemplate {
 func NewDeployment() *Deployment {
 	return &Deployment{
 		Kind: DeploymentKind,
-		UUID: genUUID(),
+		UUID: GenUUID(),
 	}
-}
-
-func genUUID() string {
-	u4, err := uuid.NewV4()
-	if err != nil {
-		log.Fatal(err)
-	}
-	return u4.String()
-}
-
-func genNodeUUID() string {
-	// TBD
-	return "node-uuid"
 }
 
 // NewUpstreamResponseUpgradeInfo returns new instance of UpstreamResponseUpgradeInfo data structure

@@ -32,15 +32,18 @@ func runOnce(context *cli.Context) error {
 	containers, rc := client.ListContainers()
 	if nil != rc {
 		log.Error(rc)
+		log.Infoln("[-]runOnce()")
 		return rc
 	}
 	if len(containers) == 0 {
 		log.Info("There are no launched containers on the host")
+		log.Infoln("[-]runOnce()")
 		return nil
 	}
 	upgradeInfoArray, rc := getLaunchedSolutionsList(context, &containers)
 	if nil != rc {
 		log.Error(rc)
+		log.Infoln("[-]runOnce()")
 		return rc
 	}
 	rc = doUpgradeSolutions(&upgradeInfoArray, &containers)
