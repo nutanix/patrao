@@ -82,6 +82,51 @@ type UpstreamResponseUpgradeInfo struct {
 	}
 }
 
+// LocalSolutionInfo represents information about solutions running on the host.
+type LocalSolutionInfo struct {
+	name           string
+	services       []string
+	deploymentType string
+}
+
+// AddService add service to string array
+func (info *LocalSolutionInfo) AddService(serviceName string) {
+	info.services = append(info.services, serviceName)
+}
+
+// AddServices add services array to string array
+func (info *LocalSolutionInfo) AddServices(services []string) {
+
+	for _, item := range services {
+		info.AddService(item)
+	}
+}
+
+// GetServices returns services related to running solution
+func (info LocalSolutionInfo) GetServices() []string {
+	return info.services
+}
+
+// GetName returns solution name
+func (info LocalSolutionInfo) GetName() string {
+	return info.name
+}
+
+// SetName set solition name
+func (info *LocalSolutionInfo) SetName(solutionName string) {
+	info.name = solutionName
+}
+
+// GetDeploymentKind return deployment kind for solution
+func (info LocalSolutionInfo) GetDeploymentKind() string {
+	return info.deploymentType
+}
+
+// SetDeploymentKind sets deployment kind fo solution
+func (info *LocalSolutionInfo) SetDeploymentKind(deploymentKind string) {
+	info.deploymentType = deploymentKind
+}
+
 // SolutionNameNotFound struct present error when agent couldn't find solution name by container name
 type SolutionNameNotFound struct {
 	When time.Time
@@ -121,5 +166,12 @@ func NewDeployment() *Deployment {
 func NewUpstreamResponseUpgradeInfo() *UpstreamResponseUpgradeInfo {
 	return &UpstreamResponseUpgradeInfo{
 		HealthCheckStatus: Undefined,
+	}
+}
+
+// NewLocalSolutionInfo returns new instance of LocalSolutionInfo data structure
+func NewLocalSolutionInfo() *LocalSolutionInfo {
+	return &LocalSolutionInfo{
+		deploymentType: UndefinedDeployment,
 	}
 }

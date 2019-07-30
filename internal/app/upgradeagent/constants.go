@@ -74,3 +74,15 @@ const DefaultTimeoutS = 10
 
 // DefaultExitCode is defaule value for waitForContainerExec function
 const DefaultExitCode = -1
+
+// DockerComposeDeployment is value for docker-compose deployment kind
+const DockerComposeDeployment = "docker-compose-deployment-kind"
+
+// UndefinedDeployment is value when deployment kind is undefined
+const UndefinedDeployment = "undefined-deployment-kind"
+
+// DockerComposeProjectLabel is value for project name key for docker-compose deployments kinds
+const DockerComposeProjectLabel = "com.docker.compose.project"
+
+// DockerComposeServiceLabel is value for service name key for docker-compose deployment kinds
+const DockerComposeServiceLabel = "com.docker.compose.service"

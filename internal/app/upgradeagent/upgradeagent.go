@@ -63,23 +63,15 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 
 func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]UpstreamResponseUpgradeInfo, error) {
 	var (
-		solutions []string
-		rc        []UpstreamResponseUpgradeInfo
-		err       error
+		rc  []UpstreamResponseUpgradeInfo
+		err error
 	)
 	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
 
-	for _, current := range *containers {
-		currentSolution, _, err := GetSolutionAndServiceName(current.Name())
-		if nil != err {
-			log.Error(err)
-			continue
-		}
-		if Contains(&solutions, &currentSolution) {
-			continue
-		}
-		solutions = append(solutions, currentSolution)
-		currentPath := getURLPath + currentSolution
+	runningSolutions := GetLocalSolutionList(containers)
+
+	for _, current := range *runningSolutions {
+		currentPath := getURLPath + current.GetName()
 		resp, err := http.Get(currentPath)
 		if nil != err {
 			log.Error(err)
@@ -119,10 +111,14 @@ func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containe
 			continue
 		}
 		for _, container := range *containers {
-			name, _, _ := GetSolutionAndServiceName(container.Name())
+			name, err := container.GetProjectName()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
 			if item.Name == name {
 				err := client.StopContainer(container, DefaultTimeoutS*time.Second)
-				if nil != err {
+				if err != nil {
 					log.Error(err)
 				}
 			}
@@ -175,12 +171,20 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 				}
 			}
 			if found {
-
 				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
 			}
 		}
 		for _, container := range *containers {
-			solutionName, serviceName, _ := GetSolutionAndServiceName(container.Name())
+			solutionName, err := container.GetProjectName()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			serviceName, err := container.GetServiceName()
+			if err != nil {
+				log.Error(err)
+				continue
+			}
 			val, exist := containersSpec[serviceName]
 			if (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {

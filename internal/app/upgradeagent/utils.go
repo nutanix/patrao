@@ -3,7 +3,6 @@ package upgradeagent
 import (
 	"fmt"
 	"strings"
-	"time"
 
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
@@ -19,24 +18,48 @@ func Contains(names *[]string, item *string) bool {
 	return false
 }
 
-// GetSolutionAndServiceName returns solition name, container name by original container name
-func GetSolutionAndServiceName(containerName string) (string, string, error) {
-	var (
-		err error
-		rc  string
-	)
-	nameParts := strings.Split(containerName, "_")
-	length := len(nameParts)
+func parseLabels(labels map[string]string) (*LocalSolutionInfo, error) {
+	if value, found := labels[DockerComposeProjectLabel]; found {
+		info := NewLocalSolutionInfo()
+		info.SetDeploymentKind(DockerComposeDeployment)
+		info.SetName(value)
+		info.AddService(labels[DockerComposeServiceLabel])
 
-	if length == 0 || length < 2 {
-		err = SolutionNameNotFound{
-			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
-			fmt.Sprintf("getSolutionAndServiceName(): can't identify solution name [%s]", containerName),
-		}
-		return rc, rc, err
+		return info, nil
 	}
+	return nil, fmt.Errorf("can't parse Labels [%s]", labels)
+}
 
-	return nameParts[0][1:], nameParts[1], err
+// GetLocalSolutionList return the list of running solutions
+func GetLocalSolutionList(containers *[]Container) *[]LocalSolutionInfo {
+	var (
+		list             []LocalSolutionInfo
+		alreadyProcessed []string
+	)
+	for i, current := range *containers {
+		info, err := parseLabels(current.Labels())
+		if err != nil {
+			log.Error(err)
+			continue
+		}
+		name := info.GetName()
+		if Contains(&alreadyProcessed, &name) {
+			continue
+		}
+		for _, item := range (*containers)[i+1:] {
+			tempInfo, e := parseLabels(item.Labels())
+			if e != nil {
+				log.Error(e)
+				continue
+			}
+			if strings.Compare(info.GetName(), tempInfo.GetName()) == 0 {
+				info.AddServices(tempInfo.GetServices())
+			}
+		}
+		list = append(list, *info)
+		alreadyProcessed = append(alreadyProcessed, info.GetName())
+	}
+	return &list
 }
 
 // GenUUID generate UUID string

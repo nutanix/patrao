@@ -211,7 +211,12 @@ func (client dockerClient) GetContainerByName(solutionName string, containerName
 		return nil, err
 	}
 	for _, item := range containers {
-		currSolutionName, currServiceName, err := GetSolutionAndServiceName(item.Name())
+		currSolutionName, err := item.GetProjectName()
+		if err != nil {
+			log.Error(err)
+			return nil, err
+		}
+		currServiceName, err := item.GetServiceName()
 		if err != nil {
 			log.Error(err)
 			return nil, err
