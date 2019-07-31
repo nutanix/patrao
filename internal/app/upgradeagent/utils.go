@@ -18,7 +18,8 @@ func Contains(names *[]string, item *string) bool {
 	return false
 }
 
-func parseLabels(labels map[string]string) (*LocalSolutionInfo, error) {
+// ParseLabels parse labels map to LocalSolutionInfo data structure
+func ParseLabels(labels map[string]string) (*LocalSolutionInfo, error) {
 	if value, found := labels[DockerComposeProjectLabel]; found {
 		info := NewLocalSolutionInfo()
 		info.SetDeploymentKind(DockerComposeDeployment)
@@ -37,7 +38,7 @@ func GetLocalSolutionList(containers *[]Container) *[]LocalSolutionInfo {
 		alreadyProcessed []string
 	)
 	for i, current := range *containers {
-		info, err := parseLabels(current.Labels())
+		info, err := ParseLabels(current.Labels())
 		if err != nil {
 			log.Error(err)
 			continue
@@ -47,7 +48,7 @@ func GetLocalSolutionList(containers *[]Container) *[]LocalSolutionInfo {
 			continue
 		}
 		for _, item := range (*containers)[i+1:] {
-			tempInfo, e := parseLabels(item.Labels())
+			tempInfo, e := ParseLabels(item.Labels())
 			if e != nil {
 				log.Error(e)
 				continue
@@ -64,10 +65,7 @@ func GetLocalSolutionList(containers *[]Container) *[]LocalSolutionInfo {
 
 // GenUUID generate UUID string
 func GenUUID() string {
-	u4, err := uuid.NewV4()
-	if err != nil {
-		log.Error(err)
-	}
+	u4, _ := uuid.NewV4()
 	return u4.String()
 }
 

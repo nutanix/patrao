@@ -31,3 +31,16 @@ func TestGenNodeUUID(t *testing.T) {
 	v2 := core.GenNodeUUID()
 	assert.Equal(t, v1, v2)
 }
+
+func TestParseLabels(t *testing.T) {
+	c := CreateTestContainer(t, containerInfo, imageInfo)
+	info, err := core.ParseLabels(c.Labels())
+	assert.NoError(t, err)
+	assert.Equal(t, projectValue, info.GetName())
+	assert.Equal(t, []string{"cache"}, info.GetServices())
+	assert.Equal(t, core.DockerComposeDeployment, info.GetDeploymentKind())
+	c1 := CreateTestContainer(t, containerInfoNoLabels, imageInfo)
+	info, err = core.ParseLabels(c1.Labels())
+	assert.Error(t, err)
+	assert.Empty(t, info)
+}

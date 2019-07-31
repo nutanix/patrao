@@ -1,7 +1,6 @@
 package upgradeagent
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -125,16 +124,6 @@ func (info LocalSolutionInfo) GetDeploymentKind() string {
 // SetDeploymentKind sets deployment kind fo solution
 func (info *LocalSolutionInfo) SetDeploymentKind(deploymentKind string) {
 	info.deploymentType = deploymentKind
-}
-
-// SolutionNameNotFound struct present error when agent couldn't find solution name by container name
-type SolutionNameNotFound struct {
-	When time.Time
-	What string
-}
-
-func (e SolutionNameNotFound) Error() string {
-	return fmt.Sprintf("%v at %v", e.When, e.What)
 }
 
 // NewNode create and setup a new instance of Node structure

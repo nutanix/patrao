@@ -38,3 +38,50 @@ func TestNewDeployment(t *testing.T) {
 	assert.Equal(t, core.DeploymentKind, string(v.Kind))
 	assert.NotEmpty(t, v.UUID)
 }
+
+func TestNewLocalSolutionInfo(t *testing.T) {
+	info := core.NewLocalSolutionInfo()
+	assert.NotNil(t, info)
+	assert.Equal(t, info.GetDeploymentKind(), core.UndefinedDeployment)
+}
+
+func TestSetGetDeploymentKind(t *testing.T) {
+	info := core.NewLocalSolutionInfo()
+	deploymentKind := info.GetDeploymentKind()
+	assert.Equal(t, core.UndefinedDeployment, deploymentKind)
+	deploymentKind = core.DockerComposeDeployment
+	info.SetDeploymentKind(deploymentKind)
+	assert.Equal(t, deploymentKind, info.GetDeploymentKind())
+}
+
+func TestGetSetName(t *testing.T) {
+	info := core.NewLocalSolutionInfo()
+	assert.Empty(t, info.GetName())
+	solutionName := "test"
+	info.SetName(solutionName)
+	assert.Equal(t, solutionName, info.GetName())
+}
+
+func TestGetServices(t *testing.T) {
+	info := core.NewLocalSolutionInfo()
+	assert.Empty(t, info.GetServices())
+	info.AddService("test")
+	assert.NotEmpty(t, info.GetServices())
+}
+
+func TestAddService(t *testing.T) {
+	info := core.NewLocalSolutionInfo()
+	info.AddService("test")
+	assert.NotEmpty(t, info.GetServices())
+	assert.Equal(t, []string{"test"}, info.GetServices())
+	info.AddService("test1")
+	assert.Equal(t, []string{"test", "test1"}, info.GetServices())
+}
+
+func TestAddServices(t *testing.T) {
+	servicesArray := []string{"test1", "test2", "test3"}
+	info := core.NewLocalSolutionInfo()
+	assert.Empty(t, info.GetServices())
+	info.AddServices(servicesArray)
+	assert.Equal(t, servicesArray, info.GetServices())
+}
