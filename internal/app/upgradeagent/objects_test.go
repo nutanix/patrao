@@ -65,23 +65,14 @@ func TestGetSetName(t *testing.T) {
 func TestGetServices(t *testing.T) {
 	info := core.NewLocalSolutionInfo()
 	assert.Empty(t, info.GetServices())
-	info.AddService("test")
+	info.AddServices("test")
 	assert.NotEmpty(t, info.GetServices())
-}
-
-func TestAddService(t *testing.T) {
-	info := core.NewLocalSolutionInfo()
-	info.AddService("test")
-	assert.NotEmpty(t, info.GetServices())
-	assert.Equal(t, []string{"test"}, info.GetServices())
-	info.AddService("test1")
-	assert.Equal(t, []string{"test", "test1"}, info.GetServices())
 }
 
 func TestAddServices(t *testing.T) {
-	servicesArray := []string{"test1", "test2", "test3"}
+	testData := []string{"test1", "test2", "test3"}
 	info := core.NewLocalSolutionInfo()
 	assert.Empty(t, info.GetServices())
-	info.AddServices(servicesArray)
-	assert.Equal(t, servicesArray, info.GetServices())
+	info.AddServices("test1", "test2", "test3")
+	assert.Equal(t, testData, info.GetServices())
 }

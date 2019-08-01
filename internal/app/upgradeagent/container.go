@@ -1,7 +1,6 @@
 package upgradeagent
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -54,17 +53,13 @@ func (c Container) Labels() map[string]string {
 }
 
 // GetProjectName returns project name for given container
-func (c Container) GetProjectName() (string, error) {
-	if name, found := c.containerInfo.Config.Labels[DockerComposeProjectLabel]; found {
-		return name, nil
-	}
-	return "", errors.New("can't get project name")
+func (c Container) GetProjectName() (string, bool) {
+	name, found := c.containerInfo.Config.Labels[DockerComposeProjectLabel]
+	return name, found
 }
 
 // GetServiceName returns service name for given container
-func (c Container) GetServiceName() (string, error) {
-	if name, found := c.containerInfo.Config.Labels[DockerComposeServiceLabel]; found {
-		return name, nil
-	}
-	return "", errors.New("can't get service name")
+func (c Container) GetServiceName() (string, bool) {
+	name, found := c.containerInfo.Config.Labels[DockerComposeServiceLabel]
+	return name, found
 }

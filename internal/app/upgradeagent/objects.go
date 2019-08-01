@@ -88,17 +88,9 @@ type LocalSolutionInfo struct {
 	deploymentType string
 }
 
-// AddService add service to string array
-func (info *LocalSolutionInfo) AddService(serviceName string) {
-	info.services = append(info.services, serviceName)
-}
-
 // AddServices add services array to string array
-func (info *LocalSolutionInfo) AddServices(services []string) {
-
-	for _, item := range services {
-		info.AddService(item)
-	}
+func (info *LocalSolutionInfo) AddServices(servicesNames ...string) {
+	info.services = append(info.services, servicesNames...)
 }
 
 // GetServices returns services related to running solution

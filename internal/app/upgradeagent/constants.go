@@ -76,10 +76,10 @@ const DefaultTimeoutS = 10
 const DefaultExitCode = -1
 
 // DockerComposeDeployment is value for docker-compose deployment kind
-const DockerComposeDeployment = "docker-compose-deployment-kind"
+const DockerComposeDeployment = "docker-compose"
 
 // UndefinedDeployment is value when deployment kind is undefined
-const UndefinedDeployment = "undefined-deployment-kind"
+const UndefinedDeployment = "undefined"
 
 // DockerComposeProjectLabel is value for project name key for docker-compose deployments kinds
 const DockerComposeProjectLabel = "com.docker.compose.project"

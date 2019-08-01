@@ -44,3 +44,13 @@ func TestParseLabels(t *testing.T) {
 	assert.Error(t, err)
 	assert.Empty(t, info)
 }
+
+func TestGetLocalSolutionList(t *testing.T) {
+	assert.Empty(t, core.GetLocalSolutionList(nil))
+	c := CreateTestContainer(t, containerInfoNoLabels, imageInfo)
+	assert.Empty(t, core.GetLocalSolutionList([]core.Container{*c}))
+	c = CreateTestContainer(t, containerInfo, imageInfo)
+	assert.NotEmpty(t, core.GetLocalSolutionList([]core.Container{*c}))
+	c1 := CreateTestContainer(t, containerInfoNewName, imageInfo)
+	assert.NotEmpty(t, core.GetLocalSolutionList([]core.Container{*c, *c1}))
+}

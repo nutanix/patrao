@@ -2,7 +2,6 @@ package upgradeagent
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
@@ -24,43 +23,31 @@ func ParseLabels(labels map[string]string) (*LocalSolutionInfo, error) {
 		info := NewLocalSolutionInfo()
 		info.SetDeploymentKind(DockerComposeDeployment)
 		info.SetName(value)
-		info.AddService(labels[DockerComposeServiceLabel])
+		info.AddServices(labels[DockerComposeServiceLabel])
 
 		return info, nil
 	}
-	return nil, fmt.Errorf("can't parse Labels [%s]", labels)
+	return nil, fmt.Errorf("Cannot read labels [%s]", labels)
 }
 
 // GetLocalSolutionList return the list of running solutions
-func GetLocalSolutionList(containers *[]Container) *[]LocalSolutionInfo {
-	var (
-		list             []LocalSolutionInfo
-		alreadyProcessed []string
-	)
-	for i, current := range *containers {
-		info, err := ParseLabels(current.Labels())
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		name := info.GetName()
-		if Contains(&alreadyProcessed, &name) {
-			continue
-		}
-		for _, item := range (*containers)[i+1:] {
-			tempInfo, e := ParseLabels(item.Labels())
-			if e != nil {
-				log.Error(e)
+func GetLocalSolutionList(containers []Container) map[string]*LocalSolutionInfo {
+	projectMap := make(map[string]*LocalSolutionInfo)
+	if containers != nil {
+		for _, current := range containers {
+			info, err := ParseLabels(current.Labels())
+			if err != nil {
+				log.Error(err)
 				continue
 			}
-			if strings.Compare(info.GetName(), tempInfo.GetName()) == 0 {
-				info.AddServices(tempInfo.GetServices())
+			if _, ok := projectMap[info.GetName()]; ok {
+				projectMap[info.GetName()].AddServices(info.GetServices()...)
+			} else {
+				projectMap[info.GetName()] = info
 			}
 		}
-		list = append(list, *info)
-		alreadyProcessed = append(alreadyProcessed, info.GetName())
 	}
-	return &list
+	return projectMap
 }
 
 // GenUUID generate UUID string
