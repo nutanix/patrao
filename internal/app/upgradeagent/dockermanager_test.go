@@ -46,7 +46,7 @@ func TestStopContainer(t *testing.T) {
 	client := core.NewClient(false)
 	assert.NotNil(t, client)
 
-	c := CreateTestContainer(t)
+	c := CreateTestContainer(t, containerInfo, imageInfo)
 	err := client.StopContainer(*c, core.DefaultTimeoutS*time.Second)
 	assert.Error(t, err)
 }
@@ -55,7 +55,7 @@ func TestInspectContainer(t *testing.T) {
 	client := core.NewClient(false)
 	assert.NotNil(t, client)
 
-	c := CreateTestContainer(t)
+	c := CreateTestContainer(t, containerInfo, imageInfo)
 	_, err := client.InspectContainer(c)
 	assert.Error(t, err)
 }
@@ -64,7 +64,7 @@ func TestExecContainer(t *testing.T) {
 	client := core.NewClient(false)
 	assert.NotNil(t, client)
 
-	c := CreateTestContainer(t)
+	c := CreateTestContainer(t, containerInfo, imageInfo)
 	_, err := client.ExecContainer(c, "/bin/bash")
 	assert.Error(t, err)
 }

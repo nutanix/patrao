@@ -2,8 +2,6 @@ package upgradeagent
 
 import (
 	"fmt"
-	"strings"
-	"time"
 
 	"github.com/gofrs/uuid"
 	log "github.com/sirupsen/logrus"
@@ -19,32 +17,42 @@ func Contains(names *[]string, item *string) bool {
 	return false
 }
 
-// GetSolutionAndServiceName returns solition name, container name by original container name
-func GetSolutionAndServiceName(containerName string) (string, string, error) {
-	var (
-		err error
-		rc  string
-	)
-	nameParts := strings.Split(containerName, "_")
-	length := len(nameParts)
+// ParseLabels parse labels map to LocalSolutionInfo data structure
+func ParseLabels(labels map[string]string) (*LocalSolutionInfo, error) {
+	if value, found := labels[DockerComposeProjectLabel]; found {
+		info := NewLocalSolutionInfo()
+		info.SetDeploymentKind(DockerComposeDeployment)
+		info.SetName(value)
+		info.AddServices(labels[DockerComposeServiceLabel])
 
-	if length == 0 || length < 2 {
-		err = SolutionNameNotFound{
-			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
-			fmt.Sprintf("getSolutionAndServiceName(): can't identify solution name [%s]", containerName),
-		}
-		return rc, rc, err
+		return info, nil
 	}
+	return nil, fmt.Errorf("Cannot read labels [%s]", labels)
+}
 
-	return nameParts[0][1:], nameParts[1], err
+// GetLocalSolutionList return the list of running solutions
+func GetLocalSolutionList(containers []Container) map[string]*LocalSolutionInfo {
+	projectMap := make(map[string]*LocalSolutionInfo)
+	if containers != nil {
+		for _, current := range containers {
+			info, err := ParseLabels(current.Labels())
+			if err != nil {
+				log.Error(err)
+				continue
+			}
+			if _, ok := projectMap[info.GetName()]; ok {
+				projectMap[info.GetName()].AddServices(info.GetServices()...)
+			} else {
+				projectMap[info.GetName()] = info
+			}
+		}
+	}
+	return projectMap
 }
 
 // GenUUID generate UUID string
 func GenUUID() string {
-	u4, err := uuid.NewV4()
-	if err != nil {
-		log.Error(err)
-	}
+	u4, _ := uuid.NewV4()
 	return u4.String()
 }
 

@@ -1,7 +1,6 @@
 package upgradeagent
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -82,14 +81,41 @@ type UpstreamResponseUpgradeInfo struct {
 	}
 }
 
-// SolutionNameNotFound struct present error when agent couldn't find solution name by container name
-type SolutionNameNotFound struct {
-	When time.Time
-	What string
+// LocalSolutionInfo represents information about solutions running on the host.
+type LocalSolutionInfo struct {
+	name           string
+	services       []string
+	deploymentType string
 }
 
-func (e SolutionNameNotFound) Error() string {
-	return fmt.Sprintf("%v at %v", e.When, e.What)
+// AddServices add services array to string array
+func (info *LocalSolutionInfo) AddServices(servicesNames ...string) {
+	info.services = append(info.services, servicesNames...)
+}
+
+// GetServices returns services related to running solution
+func (info LocalSolutionInfo) GetServices() []string {
+	return info.services
+}
+
+// GetName returns solution name
+func (info LocalSolutionInfo) GetName() string {
+	return info.name
+}
+
+// SetName set solition name
+func (info *LocalSolutionInfo) SetName(solutionName string) {
+	info.name = solutionName
+}
+
+// GetDeploymentKind return deployment kind for solution
+func (info LocalSolutionInfo) GetDeploymentKind() string {
+	return info.deploymentType
+}
+
+// SetDeploymentKind sets deployment kind fo solution
+func (info *LocalSolutionInfo) SetDeploymentKind(deploymentKind string) {
+	info.deploymentType = deploymentKind
 }
 
 // NewNode create and setup a new instance of Node structure
@@ -121,5 +147,12 @@ func NewDeployment() *Deployment {
 func NewUpstreamResponseUpgradeInfo() *UpstreamResponseUpgradeInfo {
 	return &UpstreamResponseUpgradeInfo{
 		HealthCheckStatus: Undefined,
+	}
+}
+
+// NewLocalSolutionInfo returns new instance of LocalSolutionInfo data structure
+func NewLocalSolutionInfo() *LocalSolutionInfo {
+	return &LocalSolutionInfo{
+		deploymentType: UndefinedDeployment,
 	}
 }

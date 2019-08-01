@@ -17,28 +17,6 @@ func TestContains(t *testing.T) {
 	assert.False(t, core.Contains(&array, &value))
 }
 
-func TestGetSolutionAndServiceName(t *testing.T) {
-	solution_name, service_name, err := core.GetSolutionAndServiceName("/solution_service_1")
-	assert.Equal(t, "solution", solution_name)
-	assert.Equal(t, "service", service_name)
-	assert.NoError(t, err)
-
-	solution_name, service_name, err = core.GetSolutionAndServiceName("badsolutionname")
-	assert.Equal(t, "", solution_name)
-	assert.Equal(t, "", service_name)
-	assert.Error(t, err)
-
-	solution_name, service_name, err = core.GetSolutionAndServiceName("")
-	assert.Equal(t, "", solution_name)
-	assert.Equal(t, "", service_name)
-	assert.Error(t, err)
-
-	solution_name, service_name, err = core.GetSolutionAndServiceName("/solution_1")
-	assert.Equal(t, "solution", solution_name)
-	assert.Equal(t, "1", service_name)
-	assert.NoError(t, err)
-}
-
 func TestGenUUID(t *testing.T) {
 	v1 := core.GenUUID()
 	assert.NotEmpty(t, v1)
@@ -52,4 +30,27 @@ func TestGenNodeUUID(t *testing.T) {
 	assert.NotEmpty(t, v1)
 	v2 := core.GenNodeUUID()
 	assert.Equal(t, v1, v2)
+}
+
+func TestParseLabels(t *testing.T) {
+	c := CreateTestContainer(t, containerInfo, imageInfo)
+	info, err := core.ParseLabels(c.Labels())
+	assert.NoError(t, err)
+	assert.Equal(t, projectValue, info.GetName())
+	assert.Equal(t, []string{"cache"}, info.GetServices())
+	assert.Equal(t, core.DockerComposeDeployment, info.GetDeploymentKind())
+	c1 := CreateTestContainer(t, containerInfoNoLabels, imageInfo)
+	info, err = core.ParseLabels(c1.Labels())
+	assert.Error(t, err)
+	assert.Empty(t, info)
+}
+
+func TestGetLocalSolutionList(t *testing.T) {
+	assert.Empty(t, core.GetLocalSolutionList(nil))
+	c := CreateTestContainer(t, containerInfoNoLabels, imageInfo)
+	assert.Empty(t, core.GetLocalSolutionList([]core.Container{*c}))
+	c = CreateTestContainer(t, containerInfo, imageInfo)
+	assert.NotEmpty(t, core.GetLocalSolutionList([]core.Container{*c}))
+	c1 := CreateTestContainer(t, containerInfoNewName, imageInfo)
+	assert.NotEmpty(t, core.GetLocalSolutionList([]core.Container{*c, *c1}))
 }

@@ -46,7 +46,7 @@ func runOnce(context *cli.Context) error {
 		log.Infoln("[-]runOnce()")
 		return rc
 	}
-	rc = doUpgradeSolutions(&upgradeInfoArray, &containers)
+	rc = doUpgradeSolutions(upgradeInfoArray, &containers)
 	log.Infoln("[-]runOnce()")
 	return rc
 }
@@ -61,25 +61,22 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 	return nil
 }
 
-func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]UpstreamResponseUpgradeInfo, error) {
+func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) (map[string]*UpstreamResponseUpgradeInfo, error) {
 	var (
-		solutions []string
-		rc        []UpstreamResponseUpgradeInfo
-		err       error
+		//rc          []UpstreamResponseUpgradeInfo
+		err         error
+		currentPath string
 	)
 	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
+	rc := make(map[string]*UpstreamResponseUpgradeInfo)
+	runningSolutions := GetLocalSolutionList(*containers)
+	for _, current := range runningSolutions {
+		if getURLPath[len(getURLPath)-1:] != "/" {
+			currentPath = getURLPath + "/" + current.GetName()
+		} else {
+			currentPath = getURLPath + current.GetName()
 
-	for _, current := range *containers {
-		currentSolution, _, err := GetSolutionAndServiceName(current.Name())
-		if nil != err {
-			log.Error(err)
-			continue
 		}
-		if Contains(&solutions, &currentSolution) {
-			continue
-		}
-		solutions = append(solutions, currentSolution)
-		currentPath := getURLPath + currentSolution
 		resp, err := http.Get(currentPath)
 		if nil != err {
 			log.Error(err)
@@ -102,40 +99,42 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 			continue
 		}
 
-		rc = append(rc, *toUpgrade)
+		rc[toUpgrade.Name] = toUpgrade
 	}
 	return rc, err
 }
 
-func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containers *[]Container) error {
+func doUpgradeSolutions(upgradeInfoList map[string]*UpstreamResponseUpgradeInfo, containers *[]Container) error {
 	var (
-		rc      error
-		toCheck []UpstreamResponseUpgradeInfo
+		rc error
 	)
-
-	for _, item := range *upgradeInfoList {
-		if !isNewVersion(&item, containers) {
+	toCheck := make(map[string]*UpstreamResponseUpgradeInfo)
+	for _, item := range upgradeInfoList {
+		if !isNewVersion(item, containers) {
 			log.Infof("Solution [%s] is up-to-date.", item.Name)
 			continue
 		}
 		for _, container := range *containers {
-			name, _, _ := GetSolutionAndServiceName(container.Name())
+			name, found := container.GetProjectName()
+			if !found {
+				continue
+			}
 			if item.Name == name {
 				err := client.StopContainer(container, DefaultTimeoutS*time.Second)
-				if nil != err {
+				if err != nil {
 					log.Error(err)
 				}
 			}
 		}
-		err := client.LaunchSolution(&item)
+		err := client.LaunchSolution(item)
 		if err != nil {
 			log.Error(err)
 			continue
 		}
 		log.Infof("Solution [%s] is successful launched", item.Name)
-		toCheck = append(toCheck, item)
+		toCheck[item.Name] = item
 	}
-	doHealthChek(&toCheck)
+	doHealthChek(toCheck)
 
 	return rc
 }
@@ -175,12 +174,19 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 				}
 			}
 			if found {
-
 				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
 			}
 		}
 		for _, container := range *containers {
-			solutionName, serviceName, _ := GetSolutionAndServiceName(container.Name())
+			solutionName, found := container.GetProjectName()
+			if !found {
+				continue
+			}
+			serviceName, found := container.GetServiceName()
+			if !found {
+				log.Error(err)
+				continue
+			}
 			val, exist := containersSpec[serviceName]
 			if (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {
@@ -252,8 +258,8 @@ func doContainersCheck(solutionInfo *UpstreamResponseUpgradeInfo) {
 }
 
 // doHealthCheck do solutions healthcheck afeter upgrade is completed
-func doHealthChek(toCheck *[]UpstreamResponseUpgradeInfo) {
-	for _, item := range *toCheck {
-		doContainersCheck(&item)
+func doHealthChek(toCheck map[string]*UpstreamResponseUpgradeInfo) {
+	for _, item := range toCheck {
+		doContainersCheck(item)
 	}
 }
