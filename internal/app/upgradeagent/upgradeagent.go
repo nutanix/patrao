@@ -63,7 +63,6 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 
 func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) (map[string]*UpstreamResponseUpgradeInfo, error) {
 	var (
-		//rc          []UpstreamResponseUpgradeInfo
 		err         error
 		currentPath string
 	)
