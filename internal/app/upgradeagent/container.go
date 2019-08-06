@@ -46,3 +46,20 @@ func (c Container) ImageName() string {
 
 	return imageName
 }
+
+// Labels returns labels information for dedicated container
+func (c Container) Labels() map[string]string {
+	return c.containerInfo.Config.Labels
+}
+
+// GetProjectName returns project name for given container
+func (c Container) GetProjectName() (string, bool) {
+	name, found := c.containerInfo.Config.Labels[DockerComposeProjectLabel]
+	return name, found
+}
+
+// GetServiceName returns service name for given container
+func (c Container) GetServiceName() (string, bool) {
+	name, found := c.containerInfo.Config.Labels[DockerComposeServiceLabel]
+	return name, found
+}

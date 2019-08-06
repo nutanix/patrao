@@ -1,11 +1,13 @@
 package upgradeagent
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/docker/docker/api/types"
@@ -19,6 +21,9 @@ type DockerClient interface {
 	ListContainers() ([]Container, error)
 	StopContainer(Container, time.Duration) error
 	LaunchSolution(*UpstreamResponseUpgradeInfo) error
+	InspectContainer(*Container) (types.ContainerJSON, error)
+	ExecContainer(*Container, string) (int, error)
+	GetContainerByName(string, string) (*Container, error)
 }
 
 type dockerClient struct {
@@ -151,4 +156,72 @@ func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) err
 	}
 
 	return nil
+}
+
+//InspectContainer returns container configuration data structure
+func (client dockerClient) InspectContainer(c *Container) (types.ContainerJSON, error) {
+	return client.api.ContainerInspect(context.Background(), c.ID())
+}
+
+//waitForContainerExec waits while execution of the command is completed.
+func (client dockerClient) waitForContainerExec(execID string, waitTime time.Duration) (int, error) {
+	bg := context.Background()
+	timeout := time.After(waitTime)
+	for {
+		select {
+		case <-timeout:
+			return DefaultExitCode, nil
+		default:
+			if ci, err := client.api.ContainerExecInspect(bg, execID); err != nil {
+				return DefaultExitCode, err
+			} else if !ci.Running {
+				return ci.ExitCode, nil
+			}
+		}
+		time.Sleep(1 * time.Second)
+	}
+}
+
+// ExecContainer execute a command inside another container
+func (client dockerClient) ExecContainer(c *Container, cmd string) (int, error) {
+	ctx := context.Background()
+	cmdWithParams := strings.Split(cmd, " ")
+	config := types.ExecConfig{AttachStdin: false, AttachStdout: true, Cmd: cmdWithParams}
+	execID, err := client.api.ContainerExecCreate(ctx, c.ID(), config)
+	if err != nil {
+		log.Error(err)
+		return DefaultExitCode, err
+	}
+	_, er := client.api.ContainerExecAttach(ctx, execID.ID, types.ExecConfig{})
+	if er != nil {
+		return DefaultExitCode, err
+	}
+	err = client.api.ContainerExecStart(ctx, execID.ID, types.ExecStartCheck{})
+	if err != nil {
+		return DefaultExitCode, err
+	}
+	return client.waitForContainerExec(execID.ID, DefaultTimeoutS*time.Second)
+}
+
+// GetContainerByName returns Container struct by solution name and container name
+func (client dockerClient) GetContainerByName(solutionName string, containerName string) (*Container, error) {
+	containers, err := client.ListContainers()
+	if err != nil {
+		log.Error(err)
+		return nil, err
+	}
+	for _, item := range containers {
+		currSolutionName, found := item.GetProjectName()
+		if !found {
+			continue
+		}
+		currServiceName, found := item.GetServiceName()
+		if !found {
+			continue
+		}
+		if currSolutionName == solutionName && currServiceName == containerName {
+			return &item, nil
+		}
+	}
+	return nil, errors.New("Container not found")
 }

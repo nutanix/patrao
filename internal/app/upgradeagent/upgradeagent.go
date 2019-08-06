@@ -2,13 +2,11 @@ package upgradeagent
 
 import (
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"net/http"
 	"time"
 
-	"strings"
-
+	"github.com/docker/docker/api/types"
 	"github.com/jasonlvhit/gocron"
 	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
@@ -34,18 +32,21 @@ func runOnce(context *cli.Context) error {
 	containers, rc := client.ListContainers()
 	if nil != rc {
 		log.Error(rc)
+		log.Infoln("[-]runOnce()")
 		return rc
 	}
 	if len(containers) == 0 {
 		log.Info("There are no launched containers on the host")
+		log.Infoln("[-]runOnce()")
 		return nil
 	}
 	upgradeInfoArray, rc := getLaunchedSolutionsList(context, &containers)
 	if nil != rc {
 		log.Error(rc)
+		log.Infoln("[-]runOnce()")
 		return rc
 	}
-	rc = doUpgradeSolutions(&upgradeInfoArray, &containers)
+	rc = doUpgradeSolutions(upgradeInfoArray, &containers)
 	log.Infoln("[-]runOnce()")
 	return rc
 }
@@ -60,53 +61,22 @@ func schedulePeriodicUpgrades(context *cli.Context) error {
 	return nil
 }
 
-func contains(names *[]string, item *string) bool {
-	for _, it := range *names {
-		if it == *item {
-			return true
-		}
-	}
-	return false
-}
-
-func getSolutionAndServiceName(containerName string) (string, string, error) {
+func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) (map[string]*UpstreamResponseUpgradeInfo, error) {
 	var (
-		err error
-		rc  string
-	)
-	nameParts := strings.Split(containerName, "_")
-	length := len(nameParts)
-
-	if length == 0 || length < 2 {
-		err = SolutionNameNotFound{
-			time.Date(1989, 3, 15, 22, 30, 0, 0, time.UTC),
-			fmt.Sprintf("getSolutionAndServiceName(): can't identify solution name [%s]", containerName),
-		}
-		return rc, rc, err
-	}
-
-	return nameParts[0][1:], nameParts[1], err
-}
-
-func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]UpstreamResponseUpgradeInfo, error) {
-	var (
-		solutions []string
-		rc        []UpstreamResponseUpgradeInfo
-		err       error
+		//rc          []UpstreamResponseUpgradeInfo
+		err         error
+		currentPath string
 	)
 	getURLPath := context.GlobalString(UpstreamName) + UpstreamGetUpgrade
+	rc := make(map[string]*UpstreamResponseUpgradeInfo)
+	runningSolutions := GetLocalSolutionList(*containers)
+	for _, current := range runningSolutions {
+		if getURLPath[len(getURLPath)-1:] != "/" {
+			currentPath = getURLPath + "/" + current.GetName()
+		} else {
+			currentPath = getURLPath + current.GetName()
 
-	for _, current := range *containers {
-		currentSolution, _, err := getSolutionAndServiceName(current.Name())
-		if nil != err {
-			log.Error(err)
-			continue
 		}
-		if contains(&solutions, &currentSolution) {
-			continue
-		}
-		solutions = append(solutions, currentSolution)
-		currentPath := getURLPath + currentSolution
 		resp, err := http.Get(currentPath)
 		if nil != err {
 			log.Error(err)
@@ -121,7 +91,7 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 			continue
 		}
 
-		var toUpgrade UpstreamResponseUpgradeInfo
+		toUpgrade := NewUpstreamResponseUpgradeInfo()
 		err = json.Unmarshal([]byte(body), &toUpgrade)
 
 		if nil != err {
@@ -129,34 +99,43 @@ func getLaunchedSolutionsList(context *cli.Context, containers *[]Container) ([]
 			continue
 		}
 
-		rc = append(rc, toUpgrade)
+		rc[toUpgrade.Name] = toUpgrade
 	}
 	return rc, err
 }
 
-func doUpgradeSolutions(upgradeInfoList *[]UpstreamResponseUpgradeInfo, containers *[]Container) error {
-	var rc error
-	for _, item := range *upgradeInfoList {
-		if !isNewVersion(&item, containers) {
+func doUpgradeSolutions(upgradeInfoList map[string]*UpstreamResponseUpgradeInfo, containers *[]Container) error {
+	var (
+		rc error
+	)
+	toCheck := make(map[string]*UpstreamResponseUpgradeInfo)
+	for _, item := range upgradeInfoList {
+		if !isNewVersion(item, containers) {
 			log.Infof("Solution [%s] is up-to-date.", item.Name)
 			continue
 		}
 		for _, container := range *containers {
-			name, _, _ := getSolutionAndServiceName(container.Name())
+			name, found := container.GetProjectName()
+			if !found {
+				continue
+			}
 			if item.Name == name {
-				err := client.StopContainer(container, StopContainerDefaultTimeoutS)
-				if nil != err {
+				err := client.StopContainer(container, DefaultTimeoutS*time.Second)
+				if err != nil {
 					log.Error(err)
 				}
 			}
 		}
-		err := client.LaunchSolution(&item)
+		err := client.LaunchSolution(item)
 		if err != nil {
 			log.Error(err)
 			continue
 		}
 		log.Infof("Solution [%s] is successful launched", item.Name)
+		toCheck[item.Name] = item
 	}
+	doHealthChek(toCheck)
+
 	return rc
 }
 
@@ -195,12 +174,19 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 				}
 			}
 			if found {
-
 				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
 			}
 		}
 		for _, container := range *containers {
-			solutionName, serviceName, _ := getSolutionAndServiceName(container.Name())
+			solutionName, found := container.GetProjectName()
+			if !found {
+				continue
+			}
+			serviceName, found := container.GetServiceName()
+			if !found {
+				log.Error(err)
+				continue
+			}
 			val, exist := containersSpec[serviceName]
 			if (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {
@@ -211,4 +197,69 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers *[]Contai
 		}
 	}
 	return rc
+}
+
+func doContainersCheck(solutionInfo *UpstreamResponseUpgradeInfo) {
+	timeout := time.After(time.Duration(solutionInfo.ThresholdTimeS) * time.Second)
+
+	for solutionInfo.HealthCheckStatus == Undefined {
+		select {
+		case <-timeout:
+			solutionInfo.HealthCheckStatus = Unhealthy
+			log.Infof("Solution [%s] is Unhealthy", solutionInfo.Name)
+			return
+		default:
+			{
+				checkContainersCompletedCount := 0
+
+				for _, healthChekCmd := range solutionInfo.HealthCheckCmds {
+					container, err := client.GetContainerByName(solutionInfo.Name, healthChekCmd.ContainerName)
+					if err != nil {
+						log.Error(err)
+						break
+					}
+					config, err := client.InspectContainer(container)
+					if err != nil {
+						log.Error(err)
+						break
+					}
+					if !config.State.Running {
+						log.Infof("Container %s is NOT Running state.", healthChekCmd.ContainerName)
+						continue
+					}
+					if config.State.Health != nil {
+						log.Infof("Container %s has embedded healthchek.", healthChekCmd.ContainerName)
+						if config.State.Health.Status != types.Healthy {
+							log.Infof("Container %s have healthy information. The current status is [%s]", healthChekCmd.ContainerName, config.State.Health.Status)
+							continue
+						}
+					} else {
+						log.Infof("Container %s has NOT embedded healthchek. Skip this step.", healthChekCmd.ContainerName)
+					}
+					exitCode, err := client.ExecContainer(container, healthChekCmd.Cmd)
+					if err != nil {
+						log.Error(err)
+						break
+					}
+					if exitCode == 0 {
+						log.Infof("Container %s has passed healthcheck command [%s], exit code is [%d]", healthChekCmd.ContainerName, healthChekCmd.Cmd, exitCode)
+						checkContainersCompletedCount++
+					}
+				}
+				if checkContainersCompletedCount == len(solutionInfo.HealthCheckCmds) {
+					log.Infof("Solution [%s] is healthy", solutionInfo.Name)
+					solutionInfo.HealthCheckStatus = Healthy
+					return
+				}
+				time.Sleep(1 * time.Second)
+			}
+		}
+	}
+}
+
+// doHealthCheck do solutions healthcheck afeter upgrade is completed
+func doHealthChek(toCheck map[string]*UpstreamResponseUpgradeInfo) {
+	for _, item := range toCheck {
+		doContainersCheck(item)
+	}
 }

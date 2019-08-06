@@ -13,6 +13,7 @@ require (
 	github.com/opencontainers/go-digest v1.0.0-rc1 // indirect
 	github.com/pkg/errors v0.8.1 // indirect
 	github.com/sirupsen/logrus v1.4.1
+	github.com/stretchr/testify v1.2.2
 	github.com/urfave/cli v1.20.0
 	golang.org/x/net v0.0.0-20190420063019-afa5a82059c6
 	gopkg.in/yaml.v2 v2.2.2
