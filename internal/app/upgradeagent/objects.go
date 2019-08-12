@@ -6,15 +6,17 @@ import (
 
 // DeploymentClient is a common interface for any deployment kinds.
 type DeploymentClient interface {
-	UpgradeCheck(LocalSolutionInfo) bool
-	Upgrade() error
-	HealthCheck() bool
-	Rollback()
+	CheckUpgrade() bool
+	DoUpgrade() error
+	CheckHealth() bool
+	DoRollback()
+	LaunchSolution() error
+	GetLocalSolutionInfo() *LocalSolutionInfo
 }
 
 // UpstreamClient is a common interface for any upstream service kinds
 type UpstreamClient interface {
-	RequestUpgrade(LocalSolutionInfo) (*UpstreamResponseUpgradeInfo, bool)
+	RequestUpgrade(LocalSolutionInfo) (*UpstreamResponseUpgradeInfo, error)
 }
 
 // KindType Kind type for all structures

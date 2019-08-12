@@ -3,10 +3,6 @@ package upgradeagent
 import (
 	"errors"
 	"fmt"
-	"os"
-	"os/exec"
-	"path"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -20,15 +16,13 @@ import (
 type DockerClient interface {
 	ListContainers() ([]Container, error)
 	StopContainer(Container, time.Duration) error
-	LaunchSolution(*UpstreamResponseUpgradeInfo) error
 	InspectContainer(*Container) (types.ContainerJSON, error)
 	ExecContainer(*Container, string) (int, error)
 	GetContainerByName(string, string) (*Container, error)
 }
 
 type dockerClient struct {
-	api        dockerclient.CommonAPIClient
-	pullImages bool
+	api dockerclient.CommonAPIClient
 }
 
 // NewClient returns a new Client instance which can be used to interact with
@@ -37,12 +31,12 @@ type dockerClient struct {
 //  * DOCKER_HOST			the docker-engine host to send api requests to
 //  * DOCKER_TLS_VERIFY		whether to verify tls certificates
 //  * DOCKER_API_VERSION	the minimum docker api version to work with
-func NewClient(pullImages bool) DockerClient {
+func NewClient() DockerClient {
 	client, err := dockerclient.NewEnvClient()
 	if err != nil {
 		log.Fatalf("Error instantiating Docker client: %s", err)
 	}
-	return dockerClient{api: client, pullImages: pullImages}
+	return dockerClient{api: client}
 }
 
 func (client dockerClient) ListContainers() ([]Container, error) {
@@ -115,47 +109,6 @@ func (client dockerClient) waitForStop(c Container, waitTime time.Duration) erro
 		}
 		time.Sleep(1 * time.Second)
 	}
-}
-
-// LaunchSolution launch solution based on the received docker-compose specification
-func (client dockerClient) LaunchSolution(info *UpstreamResponseUpgradeInfo) error {
-	if _, isFileExist := os.Stat(info.Name); !os.IsNotExist(isFileExist) {
-		os.RemoveAll(info.Name)
-	}
-	err := os.Mkdir(info.Name, os.ModePerm)
-	if nil != err {
-		log.Error(err)
-		return err
-	}
-	defer os.Remove(info.Name)
-	dockerComposeFileName := path.Join(info.Name, DockerComposeFileName)
-	f, err := os.Create(dockerComposeFileName)
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	defer func() {
-		f.Close()
-		os.Remove(dockerComposeFileName)
-	}()
-
-	_, err = f.Write([]byte(info.Spec))
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-	log.Infof("Launching solution [%s]", info.Name)
-	ex, _ := os.Executable()
-	rootPath := filepath.Dir(ex)
-	cmd := exec.Command(DockerComposeCommand, "-f", path.Join(rootPath, dockerComposeFileName), "up", "-d")
-	err = cmd.Run()
-	if err != nil {
-		log.Error(err)
-		return err
-	}
-
-	return nil
 }
 
 //InspectContainer returns container configuration data structure

@@ -33,6 +33,12 @@ func setupAppFlags() []cli.Flag {
 			Value:  core.UpgradeIntervalValue,
 			EnvVar: core.UpgradeIntervalValueEnvVar,
 		},
+		cli.StringFlag{
+			Name:   core.UpstreamTypeName,
+			Usage:  core.UpstreamTypeUsage,
+			Value:  core.UpstreamTypeValue,
+			EnvVar: core.UpstreamTypeValueEnvVar,
+		},
 		cli.BoolFlag{
 			Name:  core.RunOnceName,
 			Usage: core.RunOnceUsage,
