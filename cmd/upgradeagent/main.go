@@ -12,46 +12,12 @@ func start(context *cli.Context) error {
 	return core.Main(context)
 }
 
-func setupAppFlags() []cli.Flag {
-
-	return []cli.Flag{
-		cli.StringFlag{
-			Name:   core.HostName,
-			Usage:  core.HostUsage,
-			Value:  core.HostValue,
-			EnvVar: core.HostEnvVar,
-		},
-		cli.StringFlag{
-			Name:   core.UpstreamName,
-			Usage:  core.UpstreamUsage,
-			Value:  core.UpstreamValue,
-			EnvVar: core.UpstreamEnvVar,
-		},
-		cli.StringFlag{
-			Name:   core.UpgradeIntervalName,
-			Usage:  core.UpgradeIntervalUsage,
-			Value:  core.UpgradeIntervalValue,
-			EnvVar: core.UpgradeIntervalValueEnvVar,
-		},
-		cli.StringFlag{
-			Name:   core.UpstreamTypeName,
-			Usage:  core.UpstreamTypeUsage,
-			Value:  core.UpstreamTypeValue,
-			EnvVar: core.UpstreamTypeValueEnvVar,
-		},
-		cli.BoolFlag{
-			Name:  core.RunOnceName,
-			Usage: core.RunOnceUsage,
-		},
-	}
-}
-
 func createApp() *cli.App {
 	app := cli.NewApp()
 	app.Name = core.ApplicationName
 	app.Usage = core.ApplicationUsage
 	app.Action = start
-	app.Flags = setupAppFlags()
+	app.Flags = core.SetupAppFlags()
 	return app
 }
 

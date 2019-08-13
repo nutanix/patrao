@@ -56,6 +56,41 @@ func GetLocalSolutionList(context *cli.Context, dockerClient DockerClient) map[s
 	return projectMap
 }
 
+// SetupAppFlags sets array of supported command line arguments
+func SetupAppFlags() []cli.Flag {
+
+	return []cli.Flag{
+		cli.StringFlag{
+			Name:   HostName,
+			Usage:  HostUsage,
+			Value:  HostValue,
+			EnvVar: HostEnvVar,
+		},
+		cli.StringFlag{
+			Name:   UpstreamName,
+			Usage:  UpstreamUsage,
+			Value:  UpstreamValue,
+			EnvVar: UpstreamEnvVar,
+		},
+		cli.StringFlag{
+			Name:   UpgradeIntervalName,
+			Usage:  UpgradeIntervalUsage,
+			Value:  UpgradeIntervalValue,
+			EnvVar: UpgradeIntervalValueEnvVar,
+		},
+		cli.StringFlag{
+			Name:   UpstreamTypeName,
+			Usage:  UpstreamTypeUsage,
+			Value:  UpstreamTypeValue,
+			EnvVar: UpstreamTypeValueEnvVar,
+		},
+		cli.BoolFlag{
+			Name:  RunOnceName,
+			Usage: RunOnceUsage,
+		},
+	}
+}
+
 // GenUUID generate UUID string
 func GenUUID() string {
 	u4, _ := uuid.NewV4()
