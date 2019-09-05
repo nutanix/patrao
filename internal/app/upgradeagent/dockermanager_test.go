@@ -29,7 +29,7 @@ func TestGetContainerByName(t *testing.T) {
 	assert.NotNil(t, client)
 	c, err := client.GetContainerByName("test", "db")
 	assert.Nil(t, c)
-	assert.EqualError(t, err, "Container not found")
+	assert.EqualError(t, err, "DockerClient::GetContainerByName() [Container not found]")
 }
 
 func TestListContainers(t *testing.T) {
