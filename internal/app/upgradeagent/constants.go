@@ -42,6 +42,18 @@ const UpstreamValue = "http://localhost:1080"
 // UpstreamEnvVar is env variable for UpstreamName
 const UpstreamEnvVar = "PATRAO_UPSTREAM_HOST"
 
+// UpstreamTypeName is a command line parameter for define which upstream kind should be used
+const UpstreamTypeName = "upstreamType"
+
+// UpstreamTypeValue is default value for UpstreamType
+const UpstreamTypeValue = "mock"
+
+// UpstreamTypeUsage is description of UpstreamType parameter
+const UpstreamTypeUsage = "define which upstream type should be used by Patrao Agent (possible values: --upstreamType=mock)"
+
+// UpstreamTypeValueEnvVar is env variable for UpstreamType parameter
+const UpstreamTypeValueEnvVar = "PATRAO_UPSTREAM_TYPE"
+
 // DockerComposeFileName is defaut file name for *.yml scripts
 const DockerComposeFileName = "docker-compose.yml"
 

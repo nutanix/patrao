@@ -20,22 +20,20 @@ func CreateUpstreamResponseUpgradeInfo(t *testing.T) *core.UpstreamResponseUpgra
 }
 
 func TestNewClient(t *testing.T) {
-	client := core.NewClient(false)
-	assert.NotNil(t, client)
-	client = core.NewClient(true)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 }
 
 func TestGetContainerByName(t *testing.T) {
-	client := core.NewClient(false)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 	c, err := client.GetContainerByName("test", "db")
 	assert.Nil(t, c)
-	assert.EqualError(t, err, "Container not found")
+	assert.EqualError(t, err, "DockerClient::GetContainerByName() [Container not found]")
 }
 
 func TestListContainers(t *testing.T) {
-	client := core.NewClient(false)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 	list, err := client.ListContainers()
 	assert.Nil(t, err)
@@ -43,7 +41,7 @@ func TestListContainers(t *testing.T) {
 }
 
 func TestStopContainer(t *testing.T) {
-	client := core.NewClient(false)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 
 	c := CreateTestContainer(t, containerInfo, imageInfo)
@@ -52,7 +50,7 @@ func TestStopContainer(t *testing.T) {
 }
 
 func TestInspectContainer(t *testing.T) {
-	client := core.NewClient(false)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 
 	c := CreateTestContainer(t, containerInfo, imageInfo)
@@ -61,21 +59,10 @@ func TestInspectContainer(t *testing.T) {
 }
 
 func TestExecContainer(t *testing.T) {
-	client := core.NewClient(false)
+	client := core.NewClient()
 	assert.NotNil(t, client)
 
 	c := CreateTestContainer(t, containerInfo, imageInfo)
 	_, err := client.ExecContainer(c, "/bin/bash")
-	assert.Error(t, err)
-}
-
-func TestLaunchSolution(t *testing.T) {
-	client := core.NewClient(false)
-	assert.NotNil(t, client)
-
-	info := CreateUpstreamResponseUpgradeInfo(t)
-	assert.NotNil(t, info)
-
-	err := client.LaunchSolution(info)
 	assert.Error(t, err)
 }
