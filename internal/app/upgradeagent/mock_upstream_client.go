@@ -2,10 +2,10 @@ package upgradeagent
 
 import (
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"net/http"
 
-	log "github.com/sirupsen/logrus"
 	"github.com/urfave/cli"
 )
 
@@ -33,23 +33,20 @@ func (mock *mockUpstreamClient) RequestUpgrade(solutionInfo LocalSolutionInfo) (
 
 	resp, err := http.Get(currentPath)
 	if nil != err {
-		log.Error(err)
-		return NewUpstreamResponseUpgradeInfo(), err
+		return NewUpstreamResponseUpgradeInfo(), fmt.Errorf("MockUpstreamClient::RequestUpgrade() [%v]", err)
 	}
 
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
 	if nil != err {
-		log.Error(err)
-		return NewUpstreamResponseUpgradeInfo(), err
+		return NewUpstreamResponseUpgradeInfo(), fmt.Errorf("MockUpstreamClient::RequestUpgrade() [%v]", err)
 	}
 
 	err = json.Unmarshal([]byte(body), &upgradeInfo)
 
 	if nil != err {
-		log.Error(err)
-		return NewUpstreamResponseUpgradeInfo(), err
+		return NewUpstreamResponseUpgradeInfo(), fmt.Errorf("MockUpstreamClient::RequestUpgrade() [%v]", err)
 	}
 
 	return upgradeInfo, nil

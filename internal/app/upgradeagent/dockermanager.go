@@ -1,7 +1,6 @@
 package upgradeagent
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -47,16 +46,16 @@ func (client dockerClient) ListContainers() ([]Container, error) {
 		types.ContainerListOptions{})
 
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("DockerClient::ListContainers() [%v]", err)
 	}
 	for _, runningContainer := range runningContainers {
 		containerInfo, err := client.api.ContainerInspect(bg, runningContainer.ID)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DockerClient::ListContainers() [%v]", err)
 		}
 		imageInfo, _, err := client.api.ImageInspectWithRaw(bg, containerInfo.Image)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("DockerClient::ListContainers() [%v]", err)
 		}
 		c := Container{containerInfo: &containerInfo, imageInfo: &imageInfo}
 		if PatraoAgentContainerName != c.Name() {
@@ -71,7 +70,7 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 	signal := DefaultStopSignal
 	log.Infof("Stopping %s (%s) with %s", c.Name(), c.ID(), signal)
 	if err := client.api.ContainerKill(bg, c.ID(), signal); err != nil {
-		return err
+		return fmt.Errorf("DockerClient::StopContainer() [%v]", err)
 	}
 	// Wait for container to exit, but proceed anyway after the timeout elapses
 	client.waitForStop(c, timeout)
@@ -82,12 +81,12 @@ func (client dockerClient) StopContainer(c Container, timeout time.Duration) err
 
 		if err := client.api.ContainerRemove(bg, c.ID(),
 			types.ContainerRemoveOptions{Force: true, RemoveVolumes: false}); err != nil {
-			return err
+			return fmt.Errorf("DockerClient::StopContainer() [%v]", err)
 		}
 	}
 	// Wait for container to be removed. In this case an error is a good thing
 	if err := client.waitForStop(c, timeout); err == nil {
-		return fmt.Errorf("Container %s (%s) could not be removed", c.Name(), c.ID())
+		return fmt.Errorf("DockerClient::StopContainer() [Container %s (%s) could not be removed]", c.Name(), c.ID())
 	}
 	return nil
 }
@@ -142,16 +141,14 @@ func (client dockerClient) ExecContainer(c *Container, cmd string) (int, error) 
 	config := types.ExecConfig{AttachStdin: false, AttachStdout: true, Cmd: cmdWithParams}
 	execID, err := client.api.ContainerExecCreate(ctx, c.ID(), config)
 	if err != nil {
-		log.Error(err)
-		return DefaultExitCode, err
+		return DefaultExitCode, fmt.Errorf("DockerClient::ExecContainer() [%v]", err)
 	}
-	_, er := client.api.ContainerExecAttach(ctx, execID.ID, types.ExecConfig{})
-	if er != nil {
-		return DefaultExitCode, err
+	if _, err := client.api.ContainerExecAttach(ctx, execID.ID, types.ExecConfig{}); err != nil {
+		return DefaultExitCode, fmt.Errorf("DockerClient::ExecContainer() [%v]", err)
 	}
 	err = client.api.ContainerExecStart(ctx, execID.ID, types.ExecStartCheck{})
 	if err != nil {
-		return DefaultExitCode, err
+		return DefaultExitCode, fmt.Errorf("DockerClient::ExecContainer() [%v]", err)
 	}
 	return client.waitForContainerExec(execID.ID, DefaultTimeoutS*time.Second)
 }
@@ -160,21 +157,14 @@ func (client dockerClient) ExecContainer(c *Container, cmd string) (int, error) 
 func (client dockerClient) GetContainerByName(solutionName string, containerName string) (*Container, error) {
 	containers, err := client.ListContainers()
 	if err != nil {
-		log.Error(err)
-		return nil, err
+		return nil, fmt.Errorf("DockerClient::GetContainerByName() [%v]", err)
 	}
 	for _, item := range containers {
-		currSolutionName, found := item.GetProjectName()
-		if !found {
-			continue
-		}
-		currServiceName, found := item.GetServiceName()
-		if !found {
-			continue
-		}
-		if currSolutionName == solutionName && currServiceName == containerName {
-			return &item, nil
+		if currSolutionName, found := item.GetProjectName(); found {
+			if currServiceName, found := item.GetServiceName(); found && currSolutionName == solutionName && currServiceName == containerName {
+				return &item, nil
+			}
 		}
 	}
-	return nil, errors.New("Container not found")
+	return nil, fmt.Errorf("DockerClient::GetContainerByName() [%s]", "Container not found")
 }

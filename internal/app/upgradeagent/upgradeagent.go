@@ -17,11 +17,9 @@ func Main(context *cli.Context) error {
 // runOnce do check launched solutions and do upgrade them if there are new versions available
 func runOnce(context *cli.Context) error {
 	log.Infoln("[+]runOnce()")
-	localSolutionList := GetLocalSolutionList(context, NewClient())
-	for _, current := range localSolutionList {
+	for _, current := range GetLocalSolutionList(context, NewClient()) {
 		if current.CheckUpgrade() == true {
-			err := current.DoUpgrade()
-			if err != nil {
+			if err := current.DoUpgrade(); err != nil {
 				log.Error(err)
 				current.DoRollback()
 				continue

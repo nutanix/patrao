@@ -1,6 +1,7 @@
 package upgradeagent
 
 import (
+	"fmt"
 	"os"
 	"os/exec"
 	"path"
@@ -34,13 +35,16 @@ func NewDockerComposeDeployment(ctx *cli.Context, upstreamServiceClient Upstream
 
 // CheckUpgrade do check if there is a new version of the current solution available
 func (d *dockerComposeDeployment) CheckUpgrade() bool {
-	upgradeInfo, err := d.upstreamClient.RequestUpgrade(*d.localSolutionInfo)
-	if err != nil {
+	var (
+		upgradeInfo *UpstreamResponseUpgradeInfo
+		err         error
+		containers  []Container
+	)
+	if upgradeInfo, err = d.upstreamClient.RequestUpgrade(*d.localSolutionInfo); err != nil {
 		log.Error(err)
 		return false
 	}
-	containers, err := d.dockerClient.ListContainers()
-	if err != nil {
+	if containers, err = d.dockerClient.ListContainers(); err != nil {
 		log.Error(err)
 		return false
 	}
@@ -54,30 +58,24 @@ func (d *dockerComposeDeployment) CheckUpgrade() bool {
 
 // Upgrade does upgrade the current solution
 func (d *dockerComposeDeployment) DoUpgrade() error {
-	containers, err := d.dockerClient.ListContainers()
-	if err != nil {
-		log.Error(err)
-		return err
+	var (
+		containers []Container
+		err        error
+	)
+	if containers, err = d.dockerClient.ListContainers(); err != nil {
+		return fmt.Errorf("DockerComposeDeployment::DoUpgrade [%v]", err)
 	}
 	for _, container := range containers {
-		name, found := container.GetProjectName()
-		if !found {
-			continue
-		}
-		if d.localSolutionInfo.name == name {
-			err := d.dockerClient.StopContainer(container, DefaultTimeoutS*time.Second)
-			if err != nil {
-				log.Error(err)
+		if name, found := container.GetProjectName(); found && d.localSolutionInfo.name == name {
+			if err = d.dockerClient.StopContainer(container, DefaultTimeoutS*time.Second); err != nil {
+				return fmt.Errorf("DockerComposeDeployment::DoUpgrade [%v]", err)
 			}
 		}
 	}
-	err = d.LaunchSolution()
-	if err != nil {
-		log.Error(err)
-		return err
+	if err = d.LaunchSolution(); err != nil {
+		return fmt.Errorf("DockerComposeDeployment::DoUpgrade [%v]", err)
 	}
 	log.Infof("Solution [%s] is successful launched", d.localSolutionInfo.name)
-
 	return nil
 }
 
@@ -93,7 +91,6 @@ func (d *dockerComposeDeployment) CheckHealth() bool {
 		default:
 			{
 				checkContainersCompletedCount := 0
-
 				for _, healthChekCmd := range d.upgradeInfo.HealthCheckCmds {
 					container, err := d.dockerClient.GetContainerByName(d.upgradeInfo.Name, healthChekCmd.ContainerName)
 					if err != nil {
@@ -147,13 +144,13 @@ func (d *dockerComposeDeployment) GetLocalSolutionInfo() *LocalSolutionInfo {
 
 // isNewVersion check if there are new version available.
 func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers []Container) bool {
-	var rc bool
-
-	rc = false
+	var (
+		found bool
+	)
 	containersSpec := make(map[string]ContainerSpec)
 	specMap := make(map[string]interface{})
-	err := yaml.Unmarshal([]byte(upgradeInfo.Spec), specMap)
-	if nil != err {
+	rc := false
+	if err := yaml.Unmarshal([]byte(upgradeInfo.Spec), specMap); err != nil {
 		log.Error(err)
 		return false
 	}
@@ -162,39 +159,34 @@ func isNewVersion(upgradeInfo *UpstreamResponseUpgradeInfo, containers []Contain
 		for service := range servicesMap {
 			var (
 				serviceImageName string
-				found            bool
 				ok               bool
 			)
 			details := servicesMap[service].(map[interface{}]interface{})
 			found = false
 			for item := range details {
 				if DockerComposeImageName == item {
-					val, itemFound := details[item]
-					if itemFound {
-						serviceImageName, ok = val.(string)
-						if ok {
+					if val, itemFound := details[item]; itemFound {
+						if serviceImageName, ok = val.(string); ok {
 							found = true
+							containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
 							break
 						}
 					}
 				}
 			}
-			if found {
-				containersSpec[service.(string)] = ContainerSpec{Name: service.(string), Image: serviceImageName}
-			}
 		}
 		for _, container := range containers {
-			solutionName, found := container.GetProjectName()
-			if !found {
+			var (
+				solutionName string
+				serviceName  string
+			)
+			if solutionName, found = container.GetProjectName(); !found {
 				continue
 			}
-			serviceName, found := container.GetServiceName()
-			if !found {
-				log.Error(err)
+			if serviceName, found = container.GetServiceName(); !found {
 				continue
 			}
-			val, exist := containersSpec[serviceName]
-			if (exist) && (upgradeInfo.Name == solutionName) {
+			if val, exist := containersSpec[serviceName]; (exist) && (upgradeInfo.Name == solutionName) {
 				if container.ImageName() != val.Image {
 					rc = true
 					break
@@ -210,39 +202,30 @@ func (d *dockerComposeDeployment) LaunchSolution() error {
 	if _, isFileExist := os.Stat(d.upgradeInfo.Name); !os.IsNotExist(isFileExist) {
 		os.RemoveAll(d.upgradeInfo.Name)
 	}
-	err := os.Mkdir(d.upgradeInfo.Name, os.ModePerm)
-	if nil != err {
-		log.Error(err)
-		return err
+
+	if err := os.Mkdir(d.upgradeInfo.Name, os.ModePerm); err != nil {
+		return fmt.Errorf("DockerComposeDeployment::LaunchSolution() [%v]", err)
 	}
 	defer os.Remove(d.upgradeInfo.Name)
 	dockerComposeFileName := path.Join(d.upgradeInfo.Name, DockerComposeFileName)
 	f, err := os.Create(dockerComposeFileName)
 	if err != nil {
-		log.Error(err)
-		return err
+		return fmt.Errorf("DockerComposeDeployment::LaunchSolution() [%v]", err)
 	}
-
 	defer func() {
 		f.Close()
 		os.Remove(dockerComposeFileName)
 	}()
-
-	_, err = f.Write([]byte(d.upgradeInfo.Spec))
-	if err != nil {
-		log.Error(err)
-		return err
+	if _, err = f.Write([]byte(d.upgradeInfo.Spec)); err != nil {
+		return fmt.Errorf("DockerComposeDeployment::LaunchSolution() [%v]", err)
 	}
 	log.Infof("Launching solution [%s]", d.upgradeInfo.Name)
 	ex, _ := os.Executable()
 	rootPath := filepath.Dir(ex)
 	cmd := exec.Command(DockerComposeCommand, "-f", path.Join(rootPath, dockerComposeFileName), "up", "-d")
-	err = cmd.Run()
-	if err != nil {
-		log.Error(err)
-		return err
+	if err = cmd.Run(); err != nil {
+		return fmt.Errorf("DockerComposeDeployment::LaunchSolution() [%v]", err)
 	}
-
 	return nil
 }
 
